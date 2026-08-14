@@ -1,0 +1,44 @@
+{
+  "title": "3JSxWin Workers Page",
+  "subtitle": "Static HTML + JSON docs entry point replacing the Jekyll home page.",
+  "sections": [
+    {
+      "title": "What this project does",
+      "items": [
+        "Renders a live three.js aurora scene on the Windows desktop WorkerW layer.",
+        "Supports one continuous scene across multiple monitors.",
+        "Includes a live tuning console and tray controls."
+      ]
+    },
+    {
+      "title": "Quick links",
+      "links": [
+        {
+          "label": "README",
+          "href": "https://github.com/yaluft/3JSxWin/blob/main/README.md"
+        },
+        {
+          "label": "Install guide (Markdown)",
+          "href": "https://github.com/yaluft/3JSxWin/blob/main/docs/pages/install.md"
+        },
+        {
+          "label": "Configure guide (Markdown)",
+          "href": "https://github.com/yaluft/3JSxWin/blob/main/docs/pages/configure.md"
+        },
+        {
+          "label": "Contributing",
+          "href": "https://github.com/yaluft/3JSxWin/blob/main/CONTRIBUTING.md"
+        }
+      ]
+    },
+    {
+      "title": "Run locally",
+      "items": [
+        "git clone https://github.com/yaluft/3JSxWin.git",
+        "cd 3JSxWin",
+        ".\\build.ps1",
+        ".\\dist\\Backdrop.exe --window"
+      ]
+    }
+  ]
+}
