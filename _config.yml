@@ -1,10 +1,21 @@
-# Minimal Jekyll config for GitHub Pages.
-# Enable Pages in the repo settings (Settings → Pages → Build from branch), then this
-# theme renders README.md and the docs as a project site. Nothing here deploys on its own.
-
 title: Win11Backdrop
-description: A three.js scene living behind your Windows 11 desktop icons.
-theme: jekyll-theme-cayman
+description: A three.js aurora scene living behind your Windows 11 desktop icons.
+baseurl: "/3JSxWin"
+url: "https://yaluft.github.io"
+
+remote_theme: just-the-docs/just-the-docs
+
+# Plausible analytics — replace the domain value once you've registered the site.
+plausible_domain: "yaluft.github.io"
+
+# Navigation order for sidebar
+nav_sort: case_insensitive
+
+# Search
+search_enabled: true
+
+# Footer links
+footer_content: "Win11Backdrop — MIT License. Docs built with <a href=\"https://just-the-docs.com\">Just the Docs</a>."
 
 # Keep build artifacts, sources, and the vendored scene out of the generated site.
 exclude:
@@ -13,3 +24,13 @@ exclude:
   - "*.sln"
   - "*.ps1"
   - Win11Backdrop.sln
+  - "Recording*.mp4"
+  - "*.gif"
+  - Gemfile
+  - Gemfile.lock
+  - node_modules/
+  - vendor/
+
+plugins:
+  - jekyll-remote-theme
+  - jekyll-seo-tag

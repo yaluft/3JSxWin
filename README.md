@@ -1,6 +1,12 @@
 # 3JSxWin
 
+[![docs](https://img.shields.io/badge/docs-yaluft.github.io%2F3JSxWin-blue?style=flat-square)](https://yaluft.github.io/3JSxWin/)
+[![build](https://github.com/yaluft/3JSxWin/actions/workflows/build.yml/badge.svg)](https://github.com/yaluft/3JSxWin/actions/workflows/build.yml)
+[![lint](https://github.com/yaluft/3JSxWin/actions/workflows/lint.yml/badge.svg)](https://github.com/yaluft/3JSxWin/actions/workflows/lint.yml)
+
 A Windows 11 desktop wallpaper app that renders a live three.js aurora scene behind your icons and taskbar, using WebView2, WPF, and Win32 desktop integration.
+
+📖 **[Full documentation →](https://yaluft.github.io/3JSxWin/)**
 
 This project is for developers who enjoy desktop composition, GPU shaders, live UI tuning, and experimenting with the Microsoft Windows desktop ecosystem.
 

@@ -1,0 +1,17 @@
+# markdownlint configuration
+# https://github.com/DavidAnson/markdownlint/blob/main/doc/Rules.md
+
+default: true
+
+# Allow duplicate headings in different sections
+MD024:
+  siblings_only: true
+
+# Line length — disable for table-heavy docs
+MD013: false
+
+# Allow raw HTML (used for video embed in README)
+MD033: false
+
+# Allow inline HTML
+MD041: false
