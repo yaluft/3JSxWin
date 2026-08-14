@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="color-scheme" content="dark" />
+  <title>Backdrop</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%2304060c'/%3E%3Cpath d='M3 22 Q12 12 22 20 T29 12' stroke='%2335e3a0' stroke-width='3' fill='none'/%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="./style.css" />
+  <script type="importmap">
+    { "imports": { "three": "./vendor/three.module.js" } }
+  </script>
+</head>
+<body>
+  <canvas id="stage" aria-hidden="true"></canvas>
+
+  <div class="hud" id="hud" hidden>
+    <p class="hud__time" id="hudTime">--:--</p>
+    <p class="hud__date" id="hudDate"></p>
+  </div>
+
+  <p class="fallback" id="fallback" hidden>
+    The scene needs WebGL. Update your graphics driver, then reload from the Backdrop tray icon.
+  </p>
+
+  <script type="module" src="./js/main.js"></script>
+</body>
+</html>

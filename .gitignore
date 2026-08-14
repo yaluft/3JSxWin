@@ -1,0 +1,10 @@
+bin/
+obj/
+dist/
+*.user
+*.suo
+.vs/
+
+# Config backups written by the console SAVE
+web/**/config.json.bak
+*.bak

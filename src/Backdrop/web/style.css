@@ -1,0 +1,362 @@
+/* Boreal Drift — the page is a frame for the canvas and nothing else. */
+
+:root {
+  --void: #04060c;
+  --frost: #cfe9ff;
+  --verdant: #35e3a0;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: var(--void);
+  cursor: default;
+}
+
+body {
+  /* A wallpaper is not a document: nothing here should be selectable or draggable. */
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-user-drag: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+#stage {
+  position: fixed;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* ---------------------------------------------------------------- clock ---- */
+
+.hud {
+  position: fixed;
+  inset: auto 0 0 auto;
+  padding: clamp(24px, 4vmin, 64px);
+  text-align: right;
+  color: var(--frost);
+  font-family: "Segoe UI Variable Display", "Segoe UI Variable", "Segoe UI", system-ui, sans-serif;
+  text-shadow: 0 2px 24px rgb(4 6 12 / 85%);
+  pointer-events: none;
+}
+
+.hud[data-corner="top-left"]     { inset: 0 auto auto 0; text-align: left; }
+.hud[data-corner="top-right"]    { inset: 0 0 auto auto; text-align: right; }
+.hud[data-corner="bottom-left"]  { inset: auto auto 0 0; text-align: left; }
+.hud[data-corner="bottom-right"] { inset: auto 0 0 auto; text-align: right; }
+
+.hud__time {
+  font-size: clamp(44px, 7vmin, 132px);
+  font-weight: 200;
+  line-height: 0.92;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.92;
+}
+
+.hud__date {
+  margin-top: 0.7em;
+  font-family: "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+  font-size: clamp(11px, 1.1vmin, 16px);
+  font-weight: 500;
+  letter-spacing: 0.42em;
+  text-transform: uppercase;
+  opacity: 0.55;
+}
+
+/* ------------------------------------------------------------- fallback ---- */
+
+.fallback {
+  position: fixed;
+  inset: 50% 0 auto 0;
+  transform: translateY(-50%);
+  padding: 0 12vw;
+  text-align: center;
+  color: var(--frost);
+  font-family: "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+  font-size: 15px;
+  line-height: 1.7;
+  opacity: 0.7;
+}
+
+.fallback[hidden], .hud[hidden] { display: none; }
+
+/* ------------------------------------------------------------- console ---- */
+/* An old-school terminal panel for tuning the scene. In its own window it fills the
+   frame edge-to-edge (see .console-page); the .console block below is the base look. */
+
+/* When the console owns the whole window, fill it and drop the floating chrome. */
+.console-page { background: #04060c; }
+.console-page .console {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  max-height: none;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+.console-page .console__bar { cursor: default; }
+
+.console {
+  position: fixed;
+  top: 48px;
+  right: 48px;
+  z-index: 10;
+  width: min(360px, 92vw);
+  max-height: min(80vh, 720px);
+  display: flex;
+  flex-direction: column;
+  color: #9ff5c8;
+  background:
+    linear-gradient(rgb(6 14 12 / 6%), rgb(6 14 12 / 6%)),
+    rgb(3 8 10 / 62%);
+  backdrop-filter: blur(3px) brightness(1.05);
+  -webkit-backdrop-filter: blur(3px) brightness(1.05);
+  border: 1px solid rgb(53 227 160 / 45%);
+  border-radius: 4px;
+  box-shadow:
+    0 0 0 1px rgb(0 0 0 / 40%),
+    0 18px 60px rgb(0 0 0 / 55%),
+    inset 0 0 60px rgb(53 227 160 / 6%);
+  font-family: "Cascadia Mono", "Consolas", "Lucida Console", ui-monospace, monospace;
+  font-size: 12px;
+  line-height: 1.5;
+  text-shadow: 0 0 6px rgb(53 227 160 / 45%);
+  overflow: hidden;
+}
+
+.console[hidden] { display: none; }
+
+/* Faint scanlines, the way a CRT would show them. */
+.console::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    rgb(0 0 0 / 0%) 0px,
+    rgb(0 0 0 / 0%) 2px,
+    rgb(0 0 0 / 22%) 3px,
+    rgb(0 0 0 / 0%) 4px);
+  mix-blend-mode: multiply;
+  opacity: 0.5;
+}
+
+.console__bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px 6px 10px;
+  cursor: move;
+  user-select: none;
+  border-bottom: 1px solid rgb(53 227 160 / 30%);
+  background: rgb(53 227 160 / 8%);
+}
+
+.console__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #35e3a0;
+  box-shadow: 0 0 8px #35e3a0;
+  animation: console-blink 1.6s steps(1) infinite;
+}
+
+@keyframes console-blink { 50% { opacity: 0.3; } }
+
+.console__name {
+  flex: 1;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-size: 11px;
+  opacity: 0.85;
+}
+
+.console__x {
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: 1px solid rgb(53 227 160 / 40%);
+  border-radius: 3px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+  text-shadow: inherit;
+}
+
+.console__x:hover { background: rgb(53 227 160 / 20%); }
+
+.console__body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 12px 10px;
+  scrollbar-width: thin;
+  scrollbar-color: rgb(53 227 160 / 35%) transparent;
+}
+
+.console__body::-webkit-scrollbar { width: 8px; }
+.console__body::-webkit-scrollbar-thumb {
+  background: rgb(53 227 160 / 30%);
+  border-radius: 4px;
+}
+
+.console__group {
+  margin: 12px 0 4px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  font-size: 10px;
+  color: #35e3a0;
+  opacity: 0.85;
+}
+
+.console__group:first-child { margin-top: 2px; }
+
+.console__row {
+  display: grid;
+  grid-template-columns: 78px 1fr;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 0;
+}
+
+.console__row--toggle { grid-template-columns: 1fr auto; }
+
+.console__label {
+  font-size: 11px;
+  opacity: 0.8;
+  white-space: nowrap;
+}
+
+.console__row--reload .console__label::after {
+  content: " *";
+  color: #f5d76e;
+  opacity: 0.9;
+}
+
+.console__slider {
+  display: grid;
+  grid-template-columns: 1fr 40px;
+  align-items: center;
+  gap: 8px;
+}
+
+.console__value {
+  font-variant-numeric: tabular-nums;
+  font-size: 11px;
+  text-align: right;
+  opacity: 0.85;
+}
+
+.console input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 2px;
+  background: rgb(53 227 160 / 25%);
+  outline: none;
+}
+
+.console input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 10px;
+  height: 14px;
+  border-radius: 1px;
+  background: #35e3a0;
+  box-shadow: 0 0 8px rgb(53 227 160 / 70%);
+  cursor: pointer;
+}
+
+.console input[type="color"] {
+  width: 100%;
+  height: 20px;
+  padding: 0;
+  border: 1px solid rgb(53 227 160 / 40%);
+  border-radius: 2px;
+  background: transparent;
+  cursor: pointer;
+}
+
+.console input[type="checkbox"] {
+  width: 15px;
+  height: 15px;
+  accent-color: #35e3a0;
+  cursor: pointer;
+}
+
+.console select {
+  width: 100%;
+  padding: 2px 6px;
+  border: 1px solid rgb(53 227 160 / 40%);
+  border-radius: 2px;
+  background: rgb(3 8 10 / 90%);
+  color: inherit;
+  font: inherit;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.console__ref {
+  padding: 5px 12px;
+  border-top: 1px dashed rgb(53 227 160 / 22%);
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  opacity: 0.55;
+  user-select: text;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.console__foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 7px 12px;
+  border-top: 1px solid rgb(53 227 160 / 30%);
+  background: rgb(53 227 160 / 6%);
+}
+
+.console__stat {
+  font-size: 11px;
+  opacity: 0.75;
+  letter-spacing: 0.03em;
+}
+
+.console__actions { display: flex; gap: 8px; }
+
+.console__btn {
+  padding: 4px 12px;
+  border: 1px solid rgb(53 227 160 / 45%);
+  border-radius: 2px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+  text-shadow: inherit;
+}
+
+.console__btn:hover { background: rgb(53 227 160 / 15%); }
+
+.console__btn--go {
+  border-color: #35e3a0;
+  background: rgb(53 227 160 / 18%);
+  color: #c9ffe6;
+}
+
+.console__btn--go:hover { background: rgb(53 227 160 / 30%); }

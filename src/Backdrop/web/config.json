@@ -1,0 +1,12 @@
+{
+  "render":  { "targetFps": 60, "renderScale": 0.9, "octaves": 6, "adaptiveQuality": true,
+               "powerPreference": "high-performance", "antialias": false },
+  "palette": { "void": "#04060c", "tide": "#0b2233", "verdant": "#35e3a0",
+               "iris": "#6e5bff", "frost": "#cfe9ff" },
+  "aurora":  { "intensity": 1.6, "speed": 0.16, "height": 0.95 },
+  "horizon": { "y": 0.30, "glow": 1.2, "reflection": 0.65 },
+  "stars":   { "density": 1.0, "twinkle": 0.9 },
+  "motes":   { "count": 1600, "color": "#cfe9ff", "size": 3.4, "drift": 0.9, "opacity": 0.8 },
+  "finish":  { "grain": 0.03, "vignette": 0.35 },
+  "hud":     { "enabled": false, "corner": "bottom-right", "clock24h": true, "locale": "en-CA" }
+}

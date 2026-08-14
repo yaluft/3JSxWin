@@ -1,0 +1,15 @@
+# Minimal Jekyll config for GitHub Pages.
+# Enable Pages in the repo settings (Settings → Pages → Build from branch), then this
+# theme renders README.md and the docs as a project site. Nothing here deploys on its own.
+
+title: Win11Backdrop
+description: A three.js scene living behind your Windows 11 desktop icons.
+theme: jekyll-theme-cayman
+
+# Keep build artifacts, sources, and the vendored scene out of the generated site.
+exclude:
+  - src/
+  - dist/
+  - "*.sln"
+  - "*.ps1"
+  - Win11Backdrop.sln
