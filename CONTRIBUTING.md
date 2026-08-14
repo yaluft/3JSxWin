@@ -94,7 +94,7 @@ manual pass before you open one:
 
 Present tense, imperative, explaining *why*:
 
-```
+```text
 Verify SetParent with GetAncestor instead of GetParent
 
 GetParent returns the owner, not the parent, for a window still

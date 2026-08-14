@@ -4,14 +4,12 @@ title: Install
 nav_order: 2
 ---
 
-# Install
-{: .no_toc }
+# Install {: .no_toc }
 
 Roughly ten minutes, most of it waiting on the SDK download.
 {: .fs-6 .fw-300 }
 
-## Table of contents
-{: .no_toc .text-delta }
+## Table of contents {: .no_toc .text-delta }
 
 1. TOC
 {:toc}
@@ -21,7 +19,7 @@ Roughly ten minutes, most of it waiting on the SDK download.
 ## Prerequisites
 
 | Requirement | Notes |
-|-------------|-------|
+| --- | --- |
 | Windows 11 (or 10 20H1+) | Desktop layer integration requires Explorer to be running normally. |
 | WebView2 Runtime | Pre-installed on Windows 11. Check **Settings → Apps → Microsoft Edge WebView2 Runtime**. If missing, download the Evergreen Standalone Installer from Microsoft. |
 | .NET 8 SDK (x64) | <https://dotnet.microsoft.com/download/dotnet/8.0> — get the **SDK**, not just the runtime. |
@@ -34,7 +32,7 @@ Visual Studio is not required. VS Code with the C# Dev Kit extension works, and 
 
 Put the project somewhere without spaces or OneDrive sync:
 
-```
+```text
 C:\dev\Win11Backdrop
 ```
 
@@ -88,7 +86,7 @@ A 1280×720 window opens with the aurora in it. This confirms the shader compile
 The window disappears and the scene takes over your wallpaper, behind your icons. A small aurora icon appears in the notification area:
 
 | Tray action | What it does |
-|-------------|--------------|
+| --- | --- |
 | **Show in a window** | Pull the scene off the desktop |
 | **Reload scene** | Pick up changes to `config.json` |
 | **Open scene folder** | Jump to `dist\web\` |

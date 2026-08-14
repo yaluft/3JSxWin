@@ -19,7 +19,7 @@ during review:
 Commits made in that collaboration carry a trailer, which is the convention Anthropic
 publishes for attributing AI-assisted work:
 
-```
+```text
 Co-Authored-By: Claude <noreply@anthropic.com>
 ```
 
