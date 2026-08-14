@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>3JSxWin Workers Page</title>
+  <style>
+    :root { color-scheme: dark; }
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #0b1020;
+      color: #e7ecff;
+    }
+    main {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+    h1 { margin-bottom: 8px; }
+    .subtitle { color: #a8b2d1; margin-top: 0; }
+    section {
+      background: #141c35;
+      border: 1px solid #2a3769;
+      border-radius: 10px;
+      padding: 16px;
+      margin: 16px 0;
+    }
+    a { color: #9ec8ff; }
+    code {
+      display: block;
+      background: #0f152d;
+      border-radius: 6px;
+      padding: 10px;
+      overflow: auto;
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1 id="title">Loading…</h1>
+    <p id="subtitle" class="subtitle"></p>
+    <div id="content"></div>
+  </main>
+  <script>
+    const root = document.getElementById("content");
+
+    function renderSection(section) {
+      const wrap = document.createElement("section");
+      const heading = document.createElement("h2");
+      heading.textContent = section.title;
+      wrap.appendChild(heading);
+
+      if (Array.isArray(section.items) && section.items.length) {
+        const ul = document.createElement("ul");
+        section.items.forEach((item) => {
+          const li = document.createElement("li");
+          li.textContent = item;
+          ul.appendChild(li);
+        });
+        wrap.appendChild(ul);
+      }
+
+      if (Array.isArray(section.links) && section.links.length) {
+        const ul = document.createElement("ul");
+        section.links.forEach((link) => {
+          const li = document.createElement("li");
+          const a = document.createElement("a");
+          a.href = link.href;
+          a.textContent = link.label;
+          li.appendChild(a);
+          ul.appendChild(li);
+        });
+        wrap.appendChild(ul);
+      }
+
+      root.appendChild(wrap);
+    }
+
+    async function loadPage() {
+      try {
+        const response = await fetch("./workers.json", { cache: "no-store" });
+        if (!response.ok) {
+          throw new Error("Unable to load workers.json");
+        }
+        const data = await response.json();
+        document.getElementById("title").textContent = data.title || "3JSxWin";
+        document.getElementById("subtitle").textContent = data.subtitle || "";
+        (data.sections || []).forEach(renderSection);
+      } catch (error) {
+        document.getElementById("title").textContent = "3JSxWin Workers Page";
+        document.getElementById("subtitle").textContent = "Failed to load JSON content.";
+        const pre = document.createElement("code");
+        pre.textContent = String(error);
+        root.appendChild(pre);
+      }
+    }
+
+    loadPage();
+  </script>
+</body>
+</html>
