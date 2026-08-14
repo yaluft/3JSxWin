@@ -32,29 +32,7 @@ export const fragment = /* glsl */ `
 `;
 
 export function buildAudio(api) {
-  const drip = api.noise('white');
-  const hp = api.filter('highpass', 1800, 0.5);
-  const g = api.gain(0.03);
-  drip.connect(hp);
-  hp.connect(g);
-  g.connect(api.master);
-  const room = api.osc('sine', 55);
-  const rg = api.gain(0.045);
-  room.connect(rg);
-  rg.connect(api.master);
+  api.bed(41, 62, 0.05);
+  api.tide(0.06);
   api.startTracked();
-  api.everyRandom(1800, 4200, () => {
-    if (!api.ctx) return;
-    const now = api.ctx.currentTime;
-    const o = api.ctx.createOscillator();
-    const gg = api.ctx.createGain();
-    o.frequency.setValueAtTime(1400, now);
-    o.frequency.exponentialRampToValueAtTime(280, now + 0.16);
-    gg.gain.setValueAtTime(0.06, now);
-    gg.gain.exponentialRampToValueAtTime(0.0001, now + 0.2);
-    o.connect(gg);
-    gg.connect(api.master);
-    o.start(now);
-    o.stop(now + 0.22);
-  });
 }

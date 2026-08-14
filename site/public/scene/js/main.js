@@ -10,8 +10,8 @@ import { createMotes } from './motes.js?v=6';
 import { createHud } from './hud.js?v=6';
 import { tellHost, onHostMessage, reportError } from './host.js?v=6';
 import { createScene, nextSceneId, SCENE_IDS, SCENE_META } from './scenes.js?v=20';
-import { findPalette, randomPalette, applyPaletteToConfig } from './palettes.js?v=7';
-import { createLowVibe } from './audio.js?v=11';
+import { findPalette, randomPalette, applyPaletteToConfig, applyEnvironmentPalette, environmentFor } from './palettes.js?v=8';
+import { createLowVibe } from './audio.js?v=12';
 import { loadCatalog, setInstalled, loadTheme, resolveSceneId, dropTheme } from './theme-catalog.js';
 
 THREE.ColorManagement.enabled = false;
@@ -86,6 +86,7 @@ async function boot() {
   renderer.autoClear = !motesOn;
 
   let themeMod = await loadTheme(config.scene);
+  if (config.paletteName === 'environment') applyEnvironmentPalette(config, config.scene, themeMod);
   vibe?.setThemeModule?.(themeMod);
   sky = createScene(config.scene, config, themeMod);
   const motes = motesOn ? createMotes(config) : null;
@@ -171,6 +172,7 @@ async function boot() {
     config.scene = next;
     applySceneTune(next);
     themeMod = await loadTheme(next);
+    if (config.paletteName === 'environment') applyEnvironmentPalette(config, next, themeMod);
     vibe?.setThemeModule?.(themeMod);
     vibe?.setScene?.(next);
     sky = createScene(next, config, themeMod);
@@ -203,7 +205,6 @@ async function boot() {
     const palBefore = config.paletteName;
     const audioWasOff = config.audio?.enabled === false;
     Object.assign(config, next);
-    if (next.palette) config.palette = next.palette;
 
     if (next.audio) {
       const enabled = config.audio?.enabled !== false;
@@ -214,6 +215,8 @@ async function boot() {
     }
 
     if (next.scenes) applySceneTune(config.scene);
+    if (config.paletteName === 'environment') applyEnvironmentPalette(config, config.scene, themeMod);
+    else if (next.palette) config.palette = next.palette;
     sky?.apply(config);
 
     motes?.apply(config);
@@ -233,6 +236,7 @@ async function boot() {
   }
 
   function paletteLabel() {
+    if (config.paletteName === 'environment') return environmentFor(config.scene, themeMod).label;
     if (!config.paletteName || config.paletteName === 'boreal') return 'Boreal';
     return findPalette(config.paletteName)?.label ?? config.paletteName;
   }

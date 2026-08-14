@@ -7,7 +7,7 @@
 // That keeps it usable both in-page (apply straight to the live scene) and in a separate
 // console window (forward every change to the host, which relays to the scene).
 
-import { PALETTES } from './palettes.js';
+import { PALETTES, applyEnvironmentPalette } from './palettes.js';
 import { CORE_IDS, SCENE_IDS, SCENE_META } from './scenes-meta.js';
 import { getCatalog } from './theme-catalog.js';
 
@@ -24,7 +24,7 @@ const CONTROLS = [
   },
   {
     group: 'root', key: 'paletteName', label: 'palette', type: 'select',
-    options: ['boreal', 'custom', ...PALETTES.map((p) => p.id)],
+    options: ['environment', 'boreal', 'custom', ...PALETTES.map((p) => p.id)],
   },
 
   { section: 'aurora' },
@@ -238,6 +238,8 @@ export function createPanel(config, { onChange, onCommand } = {}) {
     if (c.key === 'paletteName') {
       if (value === 'custom') {
         if (draft.customPalette) draft.palette = { ...draft.palette, ...draft.customPalette };
+      } else if (value === 'environment') {
+        applyEnvironmentPalette(draft, draft.scene);
       } else {
         const named = PALETTES.find((p) => p.id === value);
         if (named) {
@@ -245,6 +247,9 @@ export function createPanel(config, { onChange, onCommand } = {}) {
           if (draft.motes) draft.motes.color = named.palette.frost;
         }
       }
+    }
+    if (c.key === 'scene' && draft.paletteName === 'environment') {
+      applyEnvironmentPalette(draft, value);
     }
     setStat('* unsaved');
     onChange?.(draft, c);
@@ -356,6 +361,7 @@ function syncSceneOptions(sel, draft) {
 
 function optionLabel(opt) {
   if (opt === 'custom') return 'Custom';
+  if (opt === 'environment') return 'Environment';
   return SCENE_META[opt]?.label ?? PALETTES.find((p) => p.id === opt)?.label ?? opt;
 }
 

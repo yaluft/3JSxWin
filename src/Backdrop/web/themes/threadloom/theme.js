@@ -37,16 +37,7 @@ export const fragment = /* glsl */ `
 `;
 
 export function buildAudio(api) {
-  const click = api.noise('white');
-  const hp = api.filter('highpass', 2400, 0.7);
-  const g = api.gain(0.025);
-  click.connect(hp);
-  hp.connect(g);
-  g.connect(api.master);
-  const string = api.osc('triangle', 110);
-  const sg = api.gain(0.03);
-  string.connect(sg);
-  sg.connect(api.master);
-  api.lfo(0.21, 4, string.frequency);
+  api.bed(44, 66, 0.05);
+  api.tide(0.05);
   api.startTracked();
 }

@@ -36,14 +36,7 @@ export const fragment = /* glsl */ `
 `;
 
 export function buildAudio(api) {
-  const thud = api.osc('sine', 36);
-  const g = api.gain(0.07);
-  thud.connect(g);
-  g.connect(api.master);
-  api.lfo(0.85, 10, thud.frequency);
-  const tick = api.osc('triangle', 220);
-  const tg = api.gain(0.02);
-  tick.connect(tg);
-  tg.connect(api.master);
+  api.bed(36, 54, 0.055);
+  api.tide(0.05);
   api.startTracked();
 }

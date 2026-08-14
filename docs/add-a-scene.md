@@ -1,28 +1,36 @@
 # Add a scene
 
-Keep one scene (or one soundscape) per PR.
+Keep one scene (or one soundscape) per PR. **Optional library themes** go on the `contrib/themes-library` branch, not mixed with host/C# work.
 
 ## Core shader (always loaded)
 
 1. Add the id to `CORE_IDS` and metadata in `src/Backdrop/web/js/scenes-meta.js`.
 2. Write a fragment in `src/Backdrop/web/js/scenes.js` using `COMMON` from `shader-lib.js`.
 3. Register it on the `FRAGMENTS` map.
-4. Optional soundscape: add a builder in `audio.js` and wire it in `buildFor`.
-5. Bump the `?v=` query on the `scenes.js` import in `main.js`.
-6. Test `.\dist\Backdrop.exe --window` and `?scene=<id>` in a browser.
+4. Add an environment palette in `ENV_PALETTES` (`palettes.js`).
+5. Optional soundscape: `bed` / `tide` in `audio.js` `buildFor` (no white-noise hiss).
+6. Bump the `?v=` query on the `scenes.js` import in `main.js`.
+7. Test `.\dist\Backdrop.exe --window` and `?scene=<id>` in a browser.
 
-## Optional theme (installed from the library)
+## Optional theme (library)
 
-Files ship under `src/Backdrop/web/themes/` but `theme.js` is not imported until the user toggles the theme on in the console **library** section (`config.installed`).
+Files live in `src/Backdrop/web/themes/<id>/`. The page only `import()`s `theme.js` after the user enables the id in the console **library** (`config.installed`).
+
+Contribution branch: `contrib/themes-library`.
 
 1. Add `{ id, label, blurb, family }` to `src/Backdrop/web/themes/index.json`.
 2. Create `src/Backdrop/web/themes/<id>/theme.js` exporting:
    - `id`, `meta` (`label`, `blurb`, `silent`)
    - `kind: 'shader'`
    - `fragment` — unique `main()` only; the host prepends `COMMON`
-   - optional `buildAudio(api)` using `osc` / `noise` / `filter` / `gain` / `lfo` / `startTracked` / `everyRandom` (no files)
-3. Do **not** add the id to `CORE_IDS` or statically import the module.
-4. Test by installing it in the console, then `?scene=<id>` after it is in `installed`.
+   - optional `palette` + `paletteLabel` (five slots: void, tide, verdant, iris, frost)
+   - optional `buildAudio(api)` using `api.bed(f1, f2, gain)` and `api.tide(gain)` — **no white noise, no highpass hiss**
+3. Add the same five-slot colours to `ENV_PALETTES` in `palettes.js`.
+4. Do **not** add the id to `CORE_IDS` or statically import the module.
+5. Bump `theme.js?v=` in `theme-catalog.js` after you change an existing theme.
+6. Test: console library toggle → SAVE → `?scene=<id>` with that id in `installed`.
+7. Optional still: `tools/capture-themes.mjs` then link it from `docs/themes/README.md`.
+8. Sync the public preview: `.\site\sync-scene.ps1`.
 
 ## ASCII scene (core only)
 
@@ -32,4 +40,8 @@ Files ship under `src/Backdrop/web/themes/` but `theme.js` is not imported until
 
 ## Performance
 
-Wallpapers run for hours. Stay on one full-screen quad, keep loops small, and treat 24 fps / 0.65 scale as the target.
+Wallpapers run for hours. Stay on one full-screen quad, keep loops small (Bayline’s depth layers are already near the budget), and treat 24 fps / 0.65 scale as the target.
+
+## Limits
+
+See [known-limitations.md](known-limitations.md) before promising Water/Sky/GLTF, real 3D meshes, or file-based audio.

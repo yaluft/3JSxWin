@@ -1,10 +1,10 @@
 // Loads config.json, then lets the host's command-line overrides win.
 
-import { findPalette, applyPaletteToConfig } from './palettes.js?v=6';
+import { findPalette, applyPaletteToConfig, applyEnvironmentPalette } from './palettes.js?v=8';
 
 const FALLBACK = {
   scene: 'aurora',
-  paletteName: 'boreal',
+  paletteName: 'environment',
   render: { targetFps: 24, renderScale: 0.65, octaves: 3, adaptiveQuality: true, powerPreference: 'low-power', antialias: false },
   palette: { void: '#04060c', tide: '#0b2233', verdant: '#35e3a0', iris: '#6e5bff', frost: '#cfe9ff' },
   customPalette: { void: '#04060c', tide: '#0b2233', verdant: '#35e3a0', iris: '#6e5bff', frost: '#cfe9ff' },
@@ -69,7 +69,10 @@ export async function loadConfig() {
   const paletteName = query.get('palette');
   if (paletteName) config.paletteName = paletteName;
 
-  if (config.paletteName === 'custom' && config.customPalette) {
+  if (config.paletteName === 'environment' || !config.paletteName) {
+    applyEnvironmentPalette(config, config.scene);
+    config.paletteName = 'environment';
+  } else if (config.paletteName === 'custom' && config.customPalette) {
     config.palette = { ...config.palette, ...config.customPalette };
     if (config.motes) config.motes.color = config.customPalette.frost;
   } else {

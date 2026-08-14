@@ -46,28 +46,7 @@ export const fragment = /* glsl */ `
 `;
 
 export function buildAudio(api) {
-  const bed = api.osc('sine', 38);
-  const g = api.gain(0.05);
-  bed.connect(g);
-  g.connect(api.master);
-  const crack = api.noise('pink');
-  const bp = api.filter('bandpass', 2100, 2.2);
-  const cg = api.gain(0.04);
-  crack.connect(bp);
-  bp.connect(cg);
-  cg.connect(api.master);
+  api.bed(38, 57, 0.05);
+  api.tide(0.05);
   api.startTracked();
-  api.everyRandom(400, 1400, () => {
-    if (!api.ctx) return;
-    const now = api.ctx.currentTime;
-    const o = api.ctx.createOscillator();
-    const gg = api.ctx.createGain();
-    o.frequency.value = 880 + Math.random() * 900;
-    gg.gain.setValueAtTime(0.05, now);
-    gg.gain.exponentialRampToValueAtTime(0.0001, now + 0.09);
-    o.connect(gg);
-    gg.connect(api.master);
-    o.start(now);
-    o.stop(now + 0.1);
-  });
 }

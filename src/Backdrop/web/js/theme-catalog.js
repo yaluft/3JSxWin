@@ -2,6 +2,7 @@
 // theme.js is imported the first time an installed id is shown.
 
 import { CORE_IDS, setActiveSceneIds, mergeSceneMeta, SCENE_META } from './scenes-meta.js';
+import { registerEnvPalette } from './palettes.js';
 
 const cache = new Map();
 let catalog = [];
@@ -53,9 +54,10 @@ export async function loadTheme(id) {
   if (cache.has(id)) return cache.get(id);
   if (!installed.has(id)) return null;
   try {
-    const mod = await import(`../themes/${id}/theme.js`);
+    const mod = await import(`../themes/${id}/theme.js?v=3`);
     cache.set(id, mod);
     if (mod.meta) mergeSceneMeta(mod.id ?? id, mod.meta);
+    if (mod.palette) registerEnvPalette(mod.id ?? id, { label: mod.paletteLabel, palette: mod.palette });
     return mod;
   } catch (error) {
     console.warn('theme load failed', id, error);

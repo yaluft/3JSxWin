@@ -30,6 +30,7 @@ If you do get stuck with an invisible backdrop: the tray icon is still there, an
 | Layer | Path | What you need to know to touch it |
 | --- | --- | --- |
 | Scene | `src/Backdrop/web/js/` | JavaScript and GLSL. No build step — edit, then **Reload scene** from the tray. |
+| Library themes | `src/Backdrop/web/themes/` | One folder + `index.json` row. Loaded only if `config.installed` lists the id. Branch: `contrib/themes-library`. |
 | Config | `src/Backdrop/web/config.json` | Pure data. The safest thing to change. |
 | Host window | `src/Backdrop/MainWindow.xaml.cs` | WPF + WebView2 lifecycle. |
 | Win32 | `src/Backdrop/Interop/` | P/Invoke. Read the comments before editing — several lines look redundant and are not. |
@@ -40,6 +41,8 @@ in `DesktopLayer.cs`, `MonitorLayout.cs`, and `ForegroundWatcher.cs`. Keep it th
 it makes the interop layer auditable at a glance.
 
 **Add a wallpaper.** Follow [docs/add-a-scene.md](docs/add-a-scene.md). Open an enhancement issue first if the idea is larger than one scene.
+
+**Optional `web/themes/` work** lives on `contrib/themes-library`, not on host/C# PRs. One theme per PR. Read [docs/known-limitations.md](docs/known-limitations.md) so you do not promise GLTF, Water/Sky, or file audio.
 
 ## A learning path
 

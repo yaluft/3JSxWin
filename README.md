@@ -30,8 +30,9 @@ The renderer is a vendored three.js scene (r185, offline). Tune it live with `Ct
 ## Features
 
 - Nine core scenes always loaded: Aurora, Tube Dunes, Starwell, Tube Warp, Ion, Tube Loops, Ember, Kelp, Murmur
-- Optional library under `web/themes/` (Mycelight, Mothwork, Coralnet, Lungclock, Inkatrium, Foldwell, Sporehall, Orreryheart, Threadloom) — files ship, shaders load only after you install them in the console
-- Generated soundscapes (no files); optional themes bring their own graph
+- Optional library under `web/themes/` (Mycelight, Coralnet, Inkatrium, Orreryheart, Threadloom, Orbis, Atoll, Ringfall, Nimbus, Shoal, Caldera, Bayline) — see `contrib/themes-library`
+- Per-scene **Environment** palettes, plus Neovim / Custom
+- Generated soundscapes (sine pad + brown wash, no files)
 - ASCII scenes use a 32-glyph density ramp, palette-tinted ink, and a 480-column cap
 - Palette randomizer using real Neovim themes (Catppuccin, Tokyo Night, Rosé Pine, Kanagawa, …)
 - Dual-monitor default: one native-resolution copy per display (`--duplicate-all`)
@@ -130,7 +131,9 @@ The aurora is a full-screen shader quad; the motes are a GPU points field. Both 
 
 Desktop mode no longer falls back to a window. It retries silently. `Chosen layer : None` means Explorer is not running normally.
 
-Full walkthrough: [INSTALL.md](INSTALL.md). Config reference: [docs/pages/configure.md](docs/pages/configure.md).
+What is unfinished (toast vs DComp, Win+P vs Project, library install, audio, teardown): [docs/known-limitations.md](docs/known-limitations.md).
+
+Full walkthrough: [INSTALL.md](INSTALL.md). Config reference: [docs/pages/configure.md](docs/pages/configure.md). Theme catalog: [docs/themes/README.md](docs/themes/README.md).
 
 ## Site
 

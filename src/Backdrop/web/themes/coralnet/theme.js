@@ -37,22 +37,7 @@ export const fragment = /* glsl */ `
 `;
 
 export function buildAudio(api) {
-  const wash = api.noise('brown');
-  const lp = api.filter('lowpass', 240, 0.8);
-  const g = api.gain(0.2);
-  wash.connect(lp);
-  lp.connect(g);
-  g.connect(api.master);
-  const tick = api.osc('sine', 620);
-  const tg = api.gain(0.0001);
-  tick.connect(tg);
-  tg.connect(api.master);
+  api.bed(36, 55, 0.05);
+  api.tide(0.08);
   api.startTracked();
-  api.everyRandom(500, 1600, () => {
-    if (!api.ctx) return;
-    const now = api.ctx.currentTime;
-    tg.gain.cancelScheduledValues(now);
-    tg.gain.setValueAtTime(0.04, now);
-    tg.gain.exponentialRampToValueAtTime(0.0001, now + 0.12);
-  });
 }

@@ -129,8 +129,8 @@ export function createLowVibe(volume = LEVEL, sceneId = 'aurora') {
     oscC.connect(pad);
 
     const src = noise('brown');
-    const lp = filter('lowpass', 180, 0.7);
-    const noiseGain = gain(0.35);
+    const lp = filter('lowpass', 120, 0.85);
+    const noiseGain = gain(0.08);
     src.connect(lp);
     lp.connect(noiseGain);
     lfo(0.07, 40, lp.frequency);
@@ -139,6 +139,27 @@ export function createLowVibe(volume = LEVEL, sceneId = 'aurora') {
     pad.connect(master);
     noiseGain.connect(master);
     startTracked();
+  }
+
+  function bed(f1, f2, level = 0.055) {
+    const a = osc('sine', f1);
+    const b = osc('sine', f2);
+    const g = gain(level);
+    a.connect(g);
+    b.connect(g);
+    g.connect(master);
+    return g;
+  }
+
+  function tide(level = 0.07) {
+    const src = noise('brown');
+    const lp = filter('lowpass', 130, 0.9);
+    const g = gain(level);
+    src.connect(lp);
+    lp.connect(g);
+    g.connect(master);
+    lfo(0.05, 22, lp.frequency);
+    return g;
   }
 
   function buildKelp() {
@@ -153,7 +174,7 @@ export function createLowVibe(volume = LEVEL, sceneId = 'aurora') {
 
     const wash = noise('brown');
     const washLp = filter('lowpass', 260, 0.8);
-    const washGain = gain(0.28);
+    const washGain = gain(0.12);
     wash.connect(washLp);
     washLp.connect(washGain);
     washGain.connect(master);
@@ -167,10 +188,10 @@ export function createLowVibe(volume = LEVEL, sceneId = 'aurora') {
       const o = ctx.createOscillator();
       const g = ctx.createGain();
       o.type = 'sine';
-      const startF = 620 + Math.random() * 520;
+      const startF = 180 + Math.random() * 80;
       o.frequency.setValueAtTime(startF, now);
-      o.frequency.exponentialRampToValueAtTime(140 + Math.random() * 80, now + 0.18);
-      g.gain.setValueAtTime(0.07, now);
+      o.frequency.exponentialRampToValueAtTime(70 + Math.random() * 30, now + 0.28);
+      g.gain.setValueAtTime(0.03, now);
       g.gain.exponentialRampToValueAtTime(0.0001, now + 0.22);
       o.connect(g);
       g.connect(master);
@@ -181,10 +202,10 @@ export function createLowVibe(volume = LEVEL, sceneId = 'aurora') {
   }
 
   function buildMurmur() {
-    const air = noise('pink');
-    const airHp = filter('highpass', 900, 0.6);
-    const rustle = filter('bandpass', 1750, 1.1);
-    const rustleGain = gain(0.14);
+    const air = noise('brown');
+    const airHp = filter('lowpass', 260, 0.8);
+    const rustle = filter('lowpass', 420, 0.8);
+    const rustleGain = gain(0.06);
     air.connect(airHp);
     airHp.connect(rustle);
     rustle.connect(rustleGain);
@@ -196,13 +217,6 @@ export function createLowVibe(volume = LEVEL, sceneId = 'aurora') {
     tremGain.connect(rustleGain.gain);
     lfo(0.13, 1.6, trem.frequency);
 
-    const loft = noise('white');
-    const loftBp = filter('bandpass', 2600, 0.9);
-    const loftGain = gain(0.05);
-    loft.connect(loftBp);
-    loftBp.connect(loftGain);
-    loftGain.connect(master);
-
     const bed = osc('sine', 61.7);
     const bedGain = gain(0.05);
     bed.connect(bedGain);
@@ -212,10 +226,10 @@ export function createLowVibe(volume = LEVEL, sceneId = 'aurora') {
   }
 
   function buildEmber() {
-    const hiss = noise('pink');
-    const hp = filter('highpass', 900, 0.7);
-    const bp = filter('bandpass', 1800, 0.8);
-    const g = gain(0.12);
+    const hiss = noise('brown');
+    const hp = filter('lowpass', 280, 0.8);
+    const bp = filter('lowpass', 160, 0.7);
+    const g = gain(0.08);
     hiss.connect(hp);
     hp.connect(bp);
     bp.connect(g);
@@ -233,14 +247,14 @@ export function createLowVibe(volume = LEVEL, sceneId = 'aurora') {
       const now = ctx.currentTime;
       const src = ctx.createBufferSource();
       const buf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * 0.05), ctx.sampleRate);
-      fillNoise(buf.getChannelData(0), 'white');
+      fillNoise(buf.getChannelData(0), 'brown');
       src.buffer = buf;
       const f = ctx.createBiquadFilter();
-      f.type = 'bandpass';
-      f.frequency.value = 1200 + Math.random() * 2400;
-      f.Q.value = 2.2;
+      f.type = 'lowpass';
+      f.frequency.value = 180 + Math.random() * 80;
+      f.Q.value = 0.7;
       const gg = ctx.createGain();
-      gg.gain.setValueAtTime(0.08, now);
+      gg.gain.setValueAtTime(0.03, now);
       gg.gain.exponentialRampToValueAtTime(0.0001, now + 0.08);
       src.connect(f);
       f.connect(gg);
@@ -259,9 +273,9 @@ export function createLowVibe(volume = LEVEL, sceneId = 'aurora') {
     g.connect(master);
     lfo(0.11, 8, a.frequency);
 
-    const hiss = noise('white');
-    const bp = filter('bandpass', 2400, 4);
-    const hg = gain(0.04);
+    const hiss = noise('brown');
+    const bp = filter('lowpass', 200, 0.8);
+    const hg = gain(0.05);
     hiss.connect(bp);
     bp.connect(hg);
     hg.connect(master);
@@ -287,7 +301,7 @@ export function createLowVibe(volume = LEVEL, sceneId = 'aurora') {
   }
 
   function themeApi() {
-    return { ctx, master, osc, noise, filter, gain, lfo, startTracked, everyRandom };
+    return { ctx, master, osc, noise, filter, gain, lfo, startTracked, everyRandom, bed, tide };
   }
 
   function buildFor(id) {

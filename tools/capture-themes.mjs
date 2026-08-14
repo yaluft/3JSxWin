@@ -16,8 +16,8 @@ const WEB = join(ROOT, 'src', 'Backdrop', 'web');
 const CONFIG = join(WEB, 'config.json');
 const OUT = join(ROOT, 'docs', 'themes');
 const THEMES = [
-  'mycelight', 'mothwork', 'coralnet', 'lungclock',
-  'inkatrium', 'foldwell', 'sporehall', 'orreryheart', 'threadloom',
+  'mycelight', 'coralnet', 'inkatrium', 'orreryheart', 'threadloom',
+  'orbis', 'atoll', 'ringfall', 'nimbus', 'shoal', 'caldera', 'bayline',
 ];
 const VIEWPORT = { width: 1280, height: 720 };
 const WAIT_MS = 4500;

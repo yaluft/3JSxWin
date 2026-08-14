@@ -1,6 +1,10 @@
 # Themes
 
-Core (always loaded):
+Core scenes are always in the picker. Optional themes ship under `src/Backdrop/web/themes/` and load only after they are listed in `config.installed`.
+
+Library contributions belong on **`contrib/themes-library`**. Recipe: [add-a-scene.md](../add-a-scene.md). Gaps: [known-limitations.md](../known-limitations.md).
+
+## Core (always loaded)
 
 | id | label | image |
 | --- | --- | --- |
@@ -14,16 +18,21 @@ Core (always loaded):
 | kelp | Kelp | [kelp.png](kelp.png) |
 | murmur | Murmur | [murmur.png](murmur.png) |
 
-Optional (ship in `web/themes/`, load after install):
+## Optional library
 
-| id | label | image |
-| --- | --- | --- |
-| mycelight | Mycelight | [mycelight.png](mycelight.png) |
-| mothwork | Mothwork | [mothwork.png](mothwork.png) |
-| coralnet | Coralnet | [coralnet.png](coralnet.png) |
-| lungclock | Lungclock | [lungclock.png](lungclock.png) |
-| inkatrium | Inkatrium | [inkatrium.png](inkatrium.png) |
-| foldwell | Foldwell | [foldwell.png](foldwell.png) |
-| sporehall | Sporehall | [sporehall.png](sporehall.png) |
-| orreryheart | Orreryheart | [orreryheart.png](orreryheart.png) |
-| threadloom | Threadloom | [threadloom.png](threadloom.png) |
+| id | label | family | image |
+| --- | --- | --- | --- |
+| mycelight | Mycelight | machine | [mycelight.png](mycelight.png) |
+| coralnet | Coralnet | machine | [coralnet.png](coralnet.png) |
+| inkatrium | Inkatrium | interior | [inkatrium.png](inkatrium.png) |
+| orreryheart | Orreryheart | hybrid | [orreryheart.png](orreryheart.png) |
+| threadloom | Threadloom | hybrid | [threadloom.png](threadloom.png) |
+| orbis | Orbis | world | — |
+| atoll | Atoll | world | — |
+| ringfall | Ringfall | world | — |
+| nimbus | Nimbus | world | — |
+| shoal | Shoal | world | — |
+| caldera | Caldera | world | — |
+| bayline | Bayline | world | — |
+
+Set console palette to **Environment** to use the per-scene colours. Custom / Neovim palettes stay put on scene switch.
