@@ -71,8 +71,9 @@ public partial class MainWindow : Window
 
         // Tap Ctrl+Alt+B to toggle the console window open/closed. The hook fires on a
         // system thread, so bounce the toggle onto the UI thread.
-        _hotkey = new Hotkey(() =>
-            Dispatcher.BeginInvoke(ToggleConsole));
+        _hotkey = new Hotkey(
+            () => Dispatcher.BeginInvoke(ToggleConsole),
+            cmd => Dispatcher.BeginInvoke(() => Send(new { type = cmd })));
 
         Loaded += OnLoaded;
         Closed += OnClosed;
@@ -331,6 +332,9 @@ public partial class MainWindow : Window
                 break;
             case "resetcfg":
                 ResetConfig();
+                break;
+            case "shuffle":
+                Send(new { type = "shuffle" });
                 break;
             case "close":
                 _console?.Close();

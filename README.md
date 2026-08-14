@@ -1,228 +1,144 @@
 # 3JSxWin
 
-[![docs](https://img.shields.io/badge/docs-yaluft.github.io%2F3JSxWin-blue?style=flat-square)](https://yaluft.github.io/3JSxWin/)
-[![build](https://github.com/yaluft/3JSxWin/actions/workflows/build.yml/badge.svg)](https://github.com/yaluft/3JSxWin/actions/workflows/build.yml)
-[![lint](https://github.com/yaluft/3JSxWin/actions/workflows/lint.yml/badge.svg)](https://github.com/yaluft/3JSxWin/actions/workflows/lint.yml)
-
-A Windows 11 desktop wallpaper app that renders a live three.js aurora scene behind your icons and taskbar, using WebView2, WPF, and Win32 desktop integration.
-
-📖 **[Full documentation →](https://yaluft.github.io/3JSxWin/)**
-
-This project is for developers who enjoy desktop composition, GPU shaders, live UI tuning, and experimenting with the Microsoft Windows desktop ecosystem.
-
-## Demo video
-
 <p align="center">
-  <video src="https://github.com/yaluft/3JSxWin/raw/main/Recording%202026-08-13%20234900.mp4" controls muted playsinline width="100%"></video>
+  <img src="docs/site-preview.gif" alt="yakupov.xyz website preview with live aurora" width="720" />
 </p>
 
-## Why this project exists
+<p align="center">
+  <a href="https://yakupov.xyz"><img src="https://img.shields.io/badge/live-yakupov.xyz-35e3a0?style=flat-square" alt="live site" /></a>
+  <a href="https://yakupov.xyz/install"><img src="https://img.shields.io/badge/install-one--liner-6e5bff?style=flat-square" alt="install" /></a>
+  <a href="https://yakupov.xyz"><img src="https://hits.sh/yakupov.xyz.svg?style=flat-square&label=views" alt="live views" /></a>
+  <a href="https://github.com/yaluft/3JSxWin/actions/workflows/ci.yml"><img src="https://github.com/yaluft/3JSxWin/actions/workflows/ci.yml/badge.svg" alt="ci" /></a>
+</p>
 
-The goal is simple: make a highly customisable, visually rich wallpaper that behaves like a real desktop layer, while keeping the code easy to explore and tweak.
+<p align="center">
+  <code>threejs</code> · <code>windows-11</code> · <code>wallpaper</code> · <code>webview2</code> · <code>wpf</code> · <code>glsl</code> · <code>neovim</code>
+</p>
 
-It is designed for:
+A live [three.js](https://threejs.org) aurora as a Windows 11 wallpaper. The scene sits on the real desktop `WorkerW` layer — behind your icons, behind the taskbar — hosted in WebView2 from a small WPF app.
 
-- Windows 11 desktop experimentation
-- three.js visual prototyping
-- WebView2 + WPF desktop hosts
-- Win32/Explorer integration work
-- GPU shader tuning and live config editing
+**Live:** [yakupov.xyz](https://yakupov.xyz) · **Install:** [yakupov.xyz/install](https://yakupov.xyz/install) · `]` cycles scenes · `P` shuffles a Neovim palette
 
-## Call for contributors
+## Why
 
-If you are a developer who likes Windows internals, WebView2, WPF, shader work, GPU rendering, or desktop UX, this project is a great place to contribute.
+Most live wallpapers sit *on top* of the desktop or replace Explorer. This one attaches to the same hidden Worker window Explorer uses for wallpaper, so icons stay clickable and the taskbar stays on top.
 
-We especially welcome help in these areas:
-
-- multi-monitor fixes and layout improvements
-- better desktop attach reliability
-- performance tuning for low-end GPUs
-- config UX and preset systems
-- shader polish and rendering quality
-- Windows compatibility and diagnostics
-
-Open an issue, start a discussion, or send a PR if you have an improvement, bug fix, or feature idea.
-
-## Related Microsoft ecosystem and inspiration
-
-This project sits in the same general space as the Microsoft desktop and developer tooling ecosystem, including:
-
-- [Microsoft](https://github.com/microsoft)
-- [Microsoft/WindowsAppSDK](https://github.com/microsoft/WindowsAppSDK)
-- [Microsoft/WinUI-Gallery](https://github.com/microsoft/WinUI-Gallery)
-- [Microsoft/PowerToys](https://github.com/microsoft/PowerToys)
-- [Microsoft/terminal](https://github.com/microsoft/terminal)
-- [Microsoft/WindowsDesktop](https://github.com/microsoft/WindowsDesktop)
-
-This project also benefited from exploring modern desktop and browser hosting patterns in the Windows ecosystem, and from working with Claude during the design and debugging process.
+The renderer is a vendored three.js scene (r185, offline). Tune it live with `Ctrl+Alt+B`.
 
 ## Features
 
-- Live aurora wallpaper rendered in a real desktop layer
-- WebView2-hosted scene with a full-screen three.js canvas
-- One continuous scene across multiple monitors
-- Windowed preview mode for safe testing before desktop takeover
-- Tray controls for showing the scene in a window, reloading config, and diagnostics
-- Live scene tuning via an on-screen console
-- Startup shortcut installation for launching automatically
-- Log and diagnostic tooling for troubleshooting Explorer/desktop attachment issues
+- Eleven scenes: aurora, lattice, hex ASCII, starwell, caustic, ion, Kanagawa, silk, ember, bloom, plus Pulse (anime.js)
+- Hex ASCII is inspired by [DeoVolenteGames' ascii-renderer](https://deovolentegames.github.io/ascii-renderer/) ([@DeoVolenteGames](https://github.com/DeoVolenteGames))
+- Low-vibe drone at 20% volume (click or key once in a browser if autoplay is blocked)
+- Palette randomizer using real Neovim themes (Catppuccin, Tokyo Night, Rosé Pine, Kanagawa, …)
+- Aurora shader + GPU motes, one continuous canvas across monitors
+- `--window` preview before anything touches the desktop
+- Tray icon: window/desktop toggle, reload, diagnostics, quit
+- On-scene console (`Ctrl+Alt+B`) with live sliders and colour pickers
+- Startup shortcut — no admin, no registry
+- Adaptive quality ladder so it can sit in the background for hours
 
----
+## Quick start
 
-## Install
-
-Roughly ten minutes, most of it waiting on the SDK download.
-
-## 0. What you need
-
-| | |
-| --- | --- |
-| Windows 11 | Windows 10 20H1+ also works. |
-| WebView2 Runtime | **Already installed on Windows 11.** Check: Settings → Apps → Installed apps → "Microsoft Edge WebView2 Runtime". If missing, get the Evergreen Standalone Installer from Microsoft. |
-| .NET 8 SDK | <https://dotnet.microsoft.com/download/dotnet/8.0> — the **SDK**, x64, not just the runtime. |
-
-Visual Studio is not required. If you already have it with the **.NET desktop development** workload, opening `Win11Backdrop.sln` works too.
-
-## 1. Unzip
-
-Put it somewhere without spaces or OneDrive sync:
-
-```text
-C:\dev\Win11Backdrop
-```
-
-## 2. Confirm the SDK is on PATH
-
-Open **Windows Terminal** in that folder and run:
+**Install from the site** (Windows 11, or 10 20H1+):
 
 ```powershell
-dotnet --version
+irm https://yakupov.xyz/install.ps1 | iex
 ```
 
-Expect `8.0.x` or higher. If you get "not recognized", close and reopen the terminal — the installer edits PATH and existing shells do not see it.
+That downloads the zip, puts it in `%LOCALAPPDATA%\3JSxWin`, adds a Startup shortcut, and opens a preview window. Full notes: [yakupov.xyz/install](https://yakupov.xyz/install).
 
-## 3. Build
+To build from source you need [WebView2](https://developer.microsoft.com/microsoft-edge/webview2/) (already on Win11) and the [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0) (x64):
 
 ```powershell
-cd C:\dev\Win11Backdrop
+git clone https://github.com/yaluft/3JSxWin.git
+cd 3JSxWin
 .\build.ps1
+.\dist\Backdrop.exe --window    # always test here first
+.\dist\Backdrop.exe             # then put it on the desktop
 ```
 
-If PowerShell blocks the script:
+First build pulls the WebView2 NuGet package. You should end at `dist\Backdrop.exe`. If PowerShell blocks the script:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\build.ps1
 ```
 
-First run downloads the WebView2 NuGet package, so it needs a connection. You should end at `dist\Backdrop.exe`.
+Keep the tree off OneDrive and out of paths with spaces.
 
-## 4. Test in a window first
+## Using it
 
-```powershell
-.\dist\Backdrop.exe --window
-```
+The window disappears in desktop mode. A tray icon is the way back:
 
-A 1280×720 window opens with the aurora in it. This tells you the shader compiled and your GPU is fine, before anything touches your desktop. Close it when satisfied.
+| Action | What it does |
+| --- | --- |
+| Show in a window | Pull the scene off the desktop |
+| Reload scene | Re-read `dist\web\config.json` |
+| Open scene folder | Jump to `dist\web\` |
+| Open DevTools | Needs `--devtools` on the command line |
+| Open log | `%LOCALAPPDATA%\Backdrop\backdrop.log` |
+| Quit Backdrop | Exit |
 
-## 5. Put it on the desktop
-
-```powershell
-.\dist\Backdrop.exe
-```
-
-The window disappears and the scene takes over your wallpaper, behind your icons. A small aurora icon appears in the notification area — that is how you get back to it:
-
-- **Show in a window** — pull it off the desktop
-- **Reload scene** — after editing `config.json`
-- **Open scene folder** — jumps to `dist\web\`
-- **Open DevTools** — needs `--devtools` on the command line
-- **Open log** — `%LOCALAPPDATA%\Backdrop\backdrop.log`
-- **Quit Backdrop**
-
-Double-clicking the tray icon toggles window and desktop mode.
-
-## 6. Multiple monitors
+Double-click the tray icon to toggle window and desktop mode.
 
 ```powershell
-.\dist\Backdrop.exe --span-all        # one continuous scene across everything
-.\dist\Backdrop.exe --monitor 1       # the second monitor from the left, only
+.\dist\Backdrop.exe --span-all        # one scene across every monitor
+.\dist\Backdrop.exe --monitor 1       # second monitor from the left only
+.\install-startup.ps1                 # start with Windows
+.\install-startup.ps1 -Arguments "--span-all"
+.\install-startup.ps1 -Remove
 ```
 
-## 7. Start it with Windows
+### Tune the scene
 
-```powershell
-.\install-startup.ps1
-.\install-startup.ps1 -Arguments "--span-all"   # pass flags through
-.\install-startup.ps1 -Remove                   # undo
-```
+`Ctrl+Alt+B` opens a floating console. Changes preview live. **SAVE** writes `config.json`; closing without saving discards them. Controls marked `*` (mote count, clock) need a reload, which SAVE does once.
 
-This drops a shortcut in your Startup folder. No admin, no registry, no scheduled task.
-
-## 8. Make it yours
-
-**Tap `Ctrl+Alt+B`** to open the on-scene console — a floating, draggable terminal-style window with sliders and colour pickers for the aurora, horizon, sky, motes, palette, and clock. Every change previews live. While it's open the scene is a normal clickable window; drag the console by its title bar. **Tap `Ctrl+Alt+B` again, press `Esc`, or click `×`** to close it — the scene drops back behind your icons and stops taking input.
-
-Changes are **not** written until you click **SAVE** (values go to `config.json` so they survive a restart); closing without saving discards them. Controls marked `*` (mote count, clock) can't change on a running scene, so SAVE reloads it once to pick them up. **RESET** restores the previous saved config from its automatic `.bak`.
-
-For hand-editing instead: `dist\web\config.json` → edit → **Reload scene** from the tray. Start with:
+Hand-edit `dist\web\config.json` and **Reload scene**, or edit `src\Backdrop\web\config.json` so it survives the next build:
 
 ```jsonc
 "aurora":  { "intensity": 0.95, "speed": 0.055, "height": 0.5 },
 "horizon": { "y": 0.36, "glow": 0.85, "reflection": 0.32 }
 ```
 
-Push `horizon.y` up to `0.5` for a wider sky, or `intensity` to `1.4` for something much louder. Editing `src\Backdrop\web\config.json` instead makes the change survive the next build.
+Raise `horizon.y` toward `0.5` for more sky, or `intensity` toward `1.4` to make it louder.
 
-### Built on three.js
-
-The scene is a [three.js](https://github.com/mrdoob/three.js) renderer (r185, vendored, MIT). If you want to push the visuals further, the official [three.js examples](https://threejs.org/examples/) are the best starting point — the aurora is a full-screen shader quad and the motes are a GPU-animated points field, both lifted from patterns in that gallery. See [CREDITS.md](CREDITS.md) for the specific examples each part follows.
-
----
+The aurora is a full-screen shader quad; the motes are a GPU points field. Both follow official three.js examples — see [CREDITS.md](CREDITS.md).
 
 ## If it goes wrong
 
-**Nothing happens when I run it.**
-Check `%LOCALAPPDATA%\Backdrop\backdrop.log`. It records every startup, whether the desktop layer was found, and any scene errors.
+| Symptom | What to do |
+| --- | --- |
+| Nothing happens | Read `%LOCALAPPDATA%\Backdrop\backdrop.log` |
+| "Already running" | It is in the notification overflow |
+| Running, but blank | Look for `Attached to WorkerW`. If not, `.\dist\Backdrop.exe --diagnose` |
+| Covers icons | Another wallpaper tool owns the layer — close Wallpaper Engine / Lively / Rainmeter |
+| Black after unplug / DPI change | It re-attaches in ~4s; otherwise **Reload scene** |
+| Old wallpaper after reboot | Expected until you run `.\install-startup.ps1` |
+| High GPU | `--fps 20 --scale 0.6`, or set those in `config.json` |
+| `dotnet` missing / NU1101 | SDK not on PATH, or nuget.org unreachable |
+| Flat colour, no aurora | Software WebGL fallback — `--devtools` and paste the shader error |
 
-**"Backdrop is already running."**
-It is in the notification area. Expand the overflow arrow.
+Desktop mode no longer falls back to a window. It retries silently. `Chosen layer : None` means Explorer is not running normally.
 
-**It is running but I see nothing.**
-Desktop mode no longer degrades into a window — it retries silently instead. Check the log for `Attached to WorkerW ...`. If you only see `Still not attached after N attempts`, run `--diagnose` and send that report.
+Full walkthrough: [INSTALL.md](INSTALL.md). Config reference: [docs/pages/configure.md](docs/pages/configure.md).
 
-**The scene shows in a window but not on the desktop, or it covers my icons.**
-Run the diagnostic — it prints exactly which desktop windows Explorer is handing out on your machine and which one Backdrop picked:
+## Site
+
+The README and a live browser preview of the scene are served from a Cloudflare Worker at [yakupov.xyz](https://yakupov.xyz). From `site/`:
 
 ```powershell
-.\dist\Backdrop.exe --diagnose
+npm install
+npx wrangler deploy
 ```
-
-The report is also on **Copy diagnostics** in the tray menu, and it goes into the log either way. Paste it and the cause is usually obvious in one line. The two common ones are another wallpaper tool already holding the layer (close Wallpaper Engine, Lively, or Rainmeter and retry), and `Chosen layer : None`, which means Explorer is not running normally.
-
-**The wallpaper goes black after changing resolution or unplugging a monitor.**
-Backdrop re-attaches within about four seconds. If not, **Reload scene** from the tray.
-
-**It came back to my old wallpaper after a reboot.**
-Expected unless you did step 7 — nothing is installed, it is just a running process.
-
-**It is eating GPU.**
-Lower `render.targetFps` to 20 and `render.renderScale` to 0.6 in `config.json`, or launch with `--fps 20 --scale 0.6` to try values before committing them.
-
-**"dotnet is not recognized" / NU1101 package errors.**
-Step 2, and confirm you can reach nuget.org.
-
-**Everything is one flat colour.**
-The GPU fell back to software rendering. `--devtools`, then check the console for a shader link error and paste it in — that is the one failure the log cannot explain on its own.
-
----
 
 ## Contributing
 
-This project is intentionally small enough to read in an afternoon, but broad enough to touch a lot of interesting desktop and graphics territory. If you want to improve or extend it, see [CONTRIBUTING.md](CONTRIBUTING.md).
+Small enough to read in an afternoon; wide enough to touch Win32, WPF, WebView2, and GLSL. See [CONTRIBUTING.md](CONTRIBUTING.md).
+
+Helpful areas: multi-monitor layout, WorkerW attach reliability, low-end GPU budgets, presets, shader polish.
 
 ## Credits
 
-- [three.js](https://github.com/mrdoob/three.js)
-- [Microsoft WebView2](https://learn.microsoft.com/microsoft-edge/webview2/)
-- [Microsoft](https://github.com/microsoft)
-- [Claude](https://claude.ai/) for design and debugging support during development
+[three.js](https://github.com/mrdoob/three.js) · [Microsoft WebView2](https://learn.microsoft.com/microsoft-edge/webview2/) · [Claude](https://claude.ai/) during design and debugging
+
+Full list: [CREDITS.md](CREDITS.md)

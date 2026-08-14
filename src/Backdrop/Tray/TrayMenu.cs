@@ -1,3 +1,4 @@
+using System.IO;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Runtime.InteropServices;
@@ -42,6 +43,11 @@ internal sealed class TrayMenu : IDisposable
         menu.Items.Add(new ToolStripMenuItem("Copy diagnostics", null, (_, _) => _window.CopyDiagnostics()));
         menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add(new ToolStripMenuItem("Quit Backdrop", null, (_, _) => Application.Current.Shutdown()));
+        menu.Items.Add(new ToolStripMenuItem("Kill Backdrop", null, (_, _) =>
+        {
+            try { Environment.Exit(1); }
+            finally { System.Diagnostics.Process.GetCurrentProcess().Kill(); }
+        }));
 
         _icon = new NotifyIcon
         {
@@ -66,9 +72,15 @@ internal sealed class TrayMenu : IDisposable
         _modeItem.Text = _window.IsWindowedMode ? "Put back on the desktop" : "Show in a window";
     }
 
-    /// <summary>Drawn at runtime so the project stays plain text end to end.</summary>
+    /// <summary>Prefers the shipped app.ico; draws a fallback if it is missing.</summary>
     private Icon BuildIcon()
     {
+        string shipped = Path.Combine(AppContext.BaseDirectory, "app.ico");
+        if (File.Exists(shipped))
+        {
+            return new Icon(shipped);
+        }
+
         using var bmp = new Bitmap(32, 32);
         using (var g = Graphics.FromImage(bmp))
         {

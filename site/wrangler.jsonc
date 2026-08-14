@@ -1,0 +1,21 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "yakupov-xyz",
+  "main": "src/worker.ts",
+  "compatibility_date": "2026-08-14",
+  "assets": {
+    "directory": "./public",
+    "binding": "ASSETS",
+    "html_handling": "none",
+    "not_found_handling": "404-page",
+    "run_worker_first": true
+  },
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 1
+  },
+  "routes": [
+    { "pattern": "yakupov.xyz", "custom_domain": true },
+    { "pattern": "www.yakupov.xyz", "custom_domain": true }
+  ]
+}

@@ -9,7 +9,7 @@ import { loadConfig } from './config.js?v=6';
 import { createMotes } from './motes.js?v=6';
 import { createHud } from './hud.js?v=6';
 import { tellHost, onHostMessage, reportError } from './host.js?v=6';
-import { createScene, nextSceneId, SCENE_IDS, SCENE_META } from './scenes.js?v=8';
+import { createScene, nextSceneId, SCENE_IDS, SCENE_META } from './scenes.js?v=7';
 import { findPalette, randomPalette, applyPaletteToConfig } from './palettes.js?v=6';
 import { createLowVibe } from './audio.js?v=6';
 import { createPulse } from './pulse.js?v=1';
@@ -44,7 +44,7 @@ async function boot() {
     config.motes.count = 0;
   }
 
-  const silentScenes = new Set(['hexascii', 'terrascii', 'warpscii', 'blobscii', 'wave', 'pulse']);
+  const silentScenes = new Set(['hexascii', 'wave', 'pulse']);
   const motesOn = (config.motes.count | 0) > 0 && !silentScenes.has(config.scene);
   const vibe = embedded ? null : createLowVibe(config.audio?.volume ?? 0.2);
 

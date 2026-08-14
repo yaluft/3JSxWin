@@ -8,3 +8,12 @@ dist/
 # Config backups written by the console SAVE
 web/**/config.json.bak
 *.bak
+
+# Cloudflare Worker
+node_modules/
+.wrangler/
+site/node_modules/
+site/.wrangler/
+site/.wrangler-out/
+site/worker-configuration.d.ts
+site/public/download/*.zip

@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="color-scheme" content="dark" />
+  <meta name="description" content="3JSxWin — a live three.js aurora as a Windows 11 wallpaper, behind the icons." />
+  <title>3JSxWin — aurora behind the Windows 11 desktop</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%2304060c'/%3E%3Cpath d='M3 22 Q12 12 22 20 T29 12' stroke='%2335e3a0' stroke-width='3' fill='none'/%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="/site.css" />
+</head>
+<body>
+  <iframe class="sky" src="/scene/?scene=aurora&amp;palette=catppuccin-mocha" title="Live three.js aurora preview" loading="eager"></iframe>
+
+  <header class="hero">
+    <p class="kicker">yakupov.xyz · 3JSxWin</p>
+    <h1>A three.js aurora living behind your Windows 11 icons.</h1>
+    <p class="lede">
+      Live wallpapers — aurora, lattice, hex ASCII, starwell, caustic, ion, Kanagawa,
+      silk, ember, bloom, plus Pulse (anime.js) — on the real desktop <code>WorkerW</code> layer.
+      Shuffle in palettes from Catppuccin, Tokyo Night, Rosé Pine, Kanagawa, and other Neovim themes.
+      A low-vibe drone sits at 20% volume.
+    </p>
+    <p class="actions">
+      <a class="btn primary" href="/install">Install</a>
+      <a class="btn" href="/scene/?scene=lattice&amp;palette=tokyonight">Play scenes</a>
+      <a class="btn" href="https://github.com/yaluft/3JSxWin">GitHub</a>
+    </p>
+  </header>
+
+  <main class="sheet">
+    <section>
+      <h2>What you get</h2>
+      <ul>
+        <li>Scenes: aurora, lattice, hex ASCII, starwell, caustic, ion, Kanagawa, silk, ember, bloom, Pulse (anime.js)</li>
+        <li>Hex ASCII after <a href="https://deovolentegames.github.io/ascii-renderer/">DeoVolenteGames ascii-renderer</a></li>
+        <li>Palette randomizer seeded from real Neovim colorschemes</li>
+        <li><code>--window</code> preview before anything touches the desktop</li>
+        <li>Tray icon: window/desktop toggle, reload, diagnostics, quit</li>
+        <li>On-scene console (<kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>B</kbd>) with live sliders</li>
+        <li>Startup shortcut — no admin, no registry</li>
+        <li>Adaptive quality so it can sit in the background for hours</li>
+      </ul>
+    </section>
+
+    <section id="install">
+      <h2>Install</h2>
+      <p>On Windows, one line in PowerShell. Details at <a href="/install">yakupov.xyz/install</a>.</p>
+      <pre><code>irm https://yakupov.xyz/install.ps1 | iex</code></pre>
+      <p>Or <a href="/download/3jsxwin-win-x64.zip">download the zip</a>. Developers who want to build from source still use the repo:</p>
+      <pre><code>git clone https://github.com/yaluft/3JSxWin.git
+cd 3JSxWin
+.\build.ps1
+.\dist\Backdrop.exe --window</code></pre>
+    </section>
+
+    <section>
+      <h2>Use it</h2>
+      <p>Desktop mode hides the window. The tray icon is the way back. Double-click it to toggle window and desktop mode.</p>
+      <pre><code>.\dist\Backdrop.exe --span-all
+.\install-startup.ps1 -Arguments "--span-all"</code></pre>
+      <p><kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>B</kbd> opens the console. <strong>SAVE</strong> writes <code>config.json</code>. Or hand-edit <code>dist\web\config.json</code> and reload from the tray.</p>
+    </section>
+
+    <section>
+      <h2>If it goes wrong</h2>
+      <p>Read <code>%LOCALAPPDATA%\Backdrop\backdrop.log</code>. If the scene never attaches, run <code>.\dist\Backdrop.exe --diagnose</code>. Close Wallpaper Engine, Lively, or Rainmeter if they already own the layer.</p>
+    </section>
+
+    <section>
+      <h2>Docs</h2>
+      <ul>
+        <li><a href="https://github.com/yaluft/3JSxWin/blob/main/README.md">README</a></li>
+        <li><a href="https://github.com/yaluft/3JSxWin/blob/main/INSTALL.md">Install guide</a></li>
+        <li><a href="https://github.com/yaluft/3JSxWin/blob/main/docs/pages/configure.md">Config reference</a></li>
+        <li><a href="https://github.com/yaluft/3JSxWin/blob/main/CONTRIBUTING.md">Contributing</a></li>
+      </ul>
+    </section>
+  </main>
+
+  <footer>
+    <p>MIT · <a href="https://github.com/yaluft/3JSxWin">yaluft/3JSxWin</a> · <a href="/install">install</a> · <img src="https://hits.sh/yakupov.xyz.svg?style=flat-square&amp;label=views" alt="live views" /></p>
+  </footer>
+</body>
+</html>

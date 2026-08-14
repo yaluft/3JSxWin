@@ -14,6 +14,10 @@
       "title": "Quick links",
       "links": [
         {
+          "label": "Live site",
+          "href": "https://yakupov.xyz"
+        },
+        {
           "label": "README",
           "href": "https://github.com/yaluft/3JSxWin/blob/main/README.md"
         },

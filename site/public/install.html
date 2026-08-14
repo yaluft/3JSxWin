@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="color-scheme" content="dark" />
+  <meta name="description" content="Install 3JSxWin — a live three.js wallpaper for Windows 11." />
+  <title>Install 3JSxWin</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%2304060c'/%3E%3Cpath d='M3 22 Q12 12 22 20 T29 12' stroke='%2335e3a0' stroke-width='3' fill='none'/%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="/site.css" />
+</head>
+<body>
+  <iframe class="sky" src="/scene/?scene=aurora&amp;palette=catppuccin-mocha" title="Live three.js aurora preview" loading="eager"></iframe>
+
+  <header class="hero">
+    <p class="kicker">yakupov.xyz/install</p>
+    <h1>Install 3JSxWin on Windows.</h1>
+    <p class="lede">
+      One PowerShell line. No admin, no installer wizard, no registry.
+      It drops the app in your user folder, adds a Startup shortcut, and opens a preview window.
+    </p>
+    <p class="actions">
+      <a class="btn primary" href="/download/3jsxwin-win-x64.zip">Download zip</a>
+      <a class="btn" href="/">Back to the site</a>
+    </p>
+  </header>
+
+  <main class="sheet">
+    <section>
+      <h2>One-liner</h2>
+      <p>Open Windows Terminal or PowerShell and paste:</p>
+      <pre><code>irm https://yakupov.xyz/install.ps1 | iex</code></pre>
+      <p>Add <code>-StartupArgs "--span-all"</code> after the script if you want every monitor, or run it with <code>-NoStart</code> to skip the preview window.</p>
+      <pre><code>&amp; ([scriptblock]::Create((irm https://yakupov.xyz/install.ps1))) -StartupArgs "--span-all"</code></pre>
+    </section>
+
+    <section>
+      <h2>What it does</h2>
+      <ul>
+        <li>Downloads <code>3jsxwin-win-x64.zip</code> from this site</li>
+        <li>Extracts to <code>%LOCALAPPDATA%\3JSxWin</code></li>
+        <li>Installs the .NET 8 Desktop Runtime via winget if it is missing (that step may prompt)</li>
+        <li>Creates a Startup shortcut so it comes back after reboot</li>
+        <li>Launches <code>Backdrop.exe --window</code> first so you can check the GPU before it takes the desktop</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>Manual zip</h2>
+      <ol>
+        <li><a href="/download/3jsxwin-win-x64.zip">Download the zip</a></li>
+        <li>Unzip to somewhere without spaces or OneDrive, e.g. <code>C:\Apps\3JSxWin</code></li>
+        <li>Install the <a href="https://dotnet.microsoft.com/download/dotnet/8.0">.NET 8 Desktop Runtime (x64)</a> if Windows asks</li>
+        <li>Run <code>Backdrop.exe --window</code>, then <code>Backdrop.exe</code></li>
+        <li>Optional: <code>.\install-startup.ps1 -Arguments "--span-all"</code></li>
+      </ol>
+    </section>
+
+    <section>
+      <h2>Uninstall</h2>
+      <pre><code>irm https://yakupov.xyz/install.ps1 | iex
+# then in a new prompt, if you saved the script:
+irm https://yakupov.xyz/install.ps1 -OutFile $env:TEMP\3jsxwin-install.ps1
+&amp; $env:TEMP\3jsxwin-install.ps1 -Uninstall</code></pre>
+      <p>Or delete <code>%LOCALAPPDATA%\3JSxWin</code> and the <code>Backdrop</code> shortcut in your Startup folder.</p>
+    </section>
+
+    <section>
+      <h2>Needs</h2>
+      <ul>
+        <li>Windows 11, or Windows 10 20H1+</li>
+        <li>WebView2 — already on Windows 11</li>
+        <li>.NET 8 Desktop Runtime — the one-liner installs it if winget is available</li>
+      </ul>
+    </section>
+  </main>
+
+  <footer>
+    <p>MIT · <a href="https://github.com/yaluft/3JSxWin">yaluft/3JSxWin</a> · <a href="/scene/">play scenes</a></p>
+  </footer>
+</body>
+</html>

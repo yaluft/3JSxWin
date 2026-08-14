@@ -18,7 +18,12 @@ internal sealed class Hotkey : IDisposable
 
     private const int VK_CONTROL = 0x11;
     private const int VK_MENU = 0x12; // Alt
+    private const int VK_LWIN = 0x5B;
+    private const int VK_RWIN = 0x5C;
     private const int VK_TRIGGER = 0x42; // 'B'
+    private const int VK_OEM_4 = 0xDB; // [
+    private const int VK_OEM_6 = 0xDD; // ]
+    private const int VK_P = 0x50;
 
     [StructLayout(LayoutKind.Sequential)]
     private struct KBDLLHOOKSTRUCT
@@ -50,19 +55,23 @@ internal sealed class Hotkey : IDisposable
     // Kept alive as a field so the delegate is not collected while the hook holds it.
     private readonly HookProc _proc;
     private readonly Action _onPressed;
+    private readonly Action<string> _onScene;
     private IntPtr _hook;
 
     // Auto-repeat sends a stream of WM_KEYDOWNs while the key is held; only the first,
     // where the trigger was not already down, should count as a press.
     private bool _triggerDown;
+    private uint _winChord;
 
     /// <param name="onPressed">
-    /// Raised once per chord press. The hook runs on a system thread, so the handler must
+    /// Raised once per Ctrl+Alt+B. The hook runs on a system thread, so the handler must
     /// marshal to the UI thread itself.
     /// </param>
-    internal Hotkey(Action onPressed)
+    /// <param name="onScene">Win+[ prev, Win+] next, Win+P shuffle.</param>
+    internal Hotkey(Action onPressed, Action<string>? onScene = null)
     {
         _onPressed = onPressed;
+        _onScene = onScene ?? (_ => { });
         _proc = HookCallback;
     }
 
@@ -79,9 +88,9 @@ internal sealed class Hotkey : IDisposable
             int msg = wParam.ToInt32();
             var data = Marshal.PtrToStructure<KBDLLHOOKSTRUCT>(lParam);
 
+            bool down = msg is WM_KEYDOWN or WM_SYSKEYDOWN;
             if (data.vkCode == VK_TRIGGER)
             {
-                bool down = msg is WM_KEYDOWN or WM_SYSKEYDOWN;
                 if (down && !_triggerDown)
                 {
                     _triggerDown = true;
@@ -92,11 +101,21 @@ internal sealed class Hotkey : IDisposable
                     _triggerDown = false;
                 }
             }
+
+            if (down && WinHeld() && data.vkCode is VK_OEM_4 or VK_OEM_6 or VK_P && _winChord != data.vkCode)
+            {
+                _winChord = data.vkCode;
+                _onScene(data.vkCode == VK_OEM_4 ? "prev" : data.vkCode == VK_OEM_6 ? "next" : "shuffle");
+                return (IntPtr)1;
+            }
+            if (!down && data.vkCode == _winChord) _winChord = 0;
         }
         return CallNextHookEx(_hook, nCode, wParam, lParam);
     }
 
     private static bool Held(int vk) => (GetAsyncKeyState(vk) & 0x8000) != 0;
+
+    private static bool WinHeld() => Held(VK_LWIN) || Held(VK_RWIN);
 
     public void Dispose()
     {

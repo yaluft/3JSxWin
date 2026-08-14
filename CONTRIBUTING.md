@@ -8,7 +8,7 @@ document is written for a team using it to learn, not for drive-by patches.
 
 ```powershell
 git clone <your-fork-url>
-cd Win11Backdrop
+cd 3JSxWin
 .\build.ps1
 .\dist\Backdrop.exe --window     # always test here first
 ```

@@ -7,7 +7,20 @@
 // That keeps it usable both in-page (apply straight to the live scene) and in a separate
 // console window (forward every change to the host, which relays to the scene).
 
+import { PALETTES } from './palettes.js';
+import { SCENE_IDS, SCENE_META } from './scenes-meta.js';
+
 const CONTROLS = [
+  { section: 'scene' },
+  {
+    group: 'root', key: 'scene', label: 'backdrop', type: 'select', reload: true,
+    options: SCENE_IDS,
+  },
+  {
+    group: 'root', key: 'paletteName', label: 'palette', type: 'select',
+    options: ['boreal', ...PALETTES.map((p) => p.id)],
+  },
+
   { section: 'aurora' },
   { group: 'aurora', key: 'intensity', label: 'intensity', min: 0, max: 2, step: 0.01 },
   { group: 'aurora', key: 'speed', label: 'speed', min: 0, max: 0.3, step: 0.001 },
@@ -64,6 +77,7 @@ export function createPanel(config, { onChange, onCommand } = {}) {
     <div class="console__foot">
       <span class="console__stat" data-stat>ready</span>
       <span class="console__actions">
+        <button class="console__btn" data-act="shuffle" type="button">SHUFFLE</button>
         <button class="console__btn" data-act="reset" type="button">RESET</button>
         <button class="console__btn console__btn--go" data-act="save" type="button">SAVE</button>
       </span>
@@ -93,7 +107,7 @@ export function createPanel(config, { onChange, onCommand } = {}) {
     name.textContent = c.label;
     row.appendChild(name);
 
-    const current = draft[c.group]?.[c.key];
+    const current = c.group === 'root' ? draft[c.key] : draft[c.group]?.[c.key];
 
     if (c.type === 'color') {
       const input = el('input', { type: 'color', value: current ?? '#ffffff' });
@@ -109,7 +123,7 @@ export function createPanel(config, { onChange, onCommand } = {}) {
       const sel = document.createElement('select');
       for (const opt of c.options) {
         const o = el('option', { value: opt });
-        o.textContent = opt;
+        o.textContent = SCENE_META[opt]?.label ?? PALETTES.find((p) => p.id === opt)?.label ?? opt;
         if (opt === current) o.selected = true;
         sel.appendChild(o);
       }
@@ -138,9 +152,17 @@ export function createPanel(config, { onChange, onCommand } = {}) {
   }
 
   function set(c, value) {
-    (draft[c.group] ??= {})[c.key] = value;
+    if (c.group === 'root') draft[c.key] = value;
+    else (draft[c.group] ??= {})[c.key] = value;
     dirty = true;
     if (c.reload) needsReload = true;
+    if (c.key === 'paletteName') {
+      const named = PALETTES.find((p) => p.id === value);
+      if (named) {
+        draft.palette = { ...draft.palette, ...named.palette };
+        if (draft.motes) draft.motes.color = named.palette.frost;
+      }
+    }
     setStat('* unsaved');
     onChange?.(draft, c);
   }
@@ -150,6 +172,10 @@ export function createPanel(config, { onChange, onCommand } = {}) {
     onCommand?.('save', { config: draft, reload: needsReload });
     dirty = false;
     setStat(needsReload ? 'saved · reloading' : 'saved');
+  });
+  root.querySelector('[data-act="shuffle"]').addEventListener('click', () => {
+    onCommand?.('shuffle');
+    setStat('shuffled palette');
   });
   root.querySelector('[data-act="reset"]').addEventListener('click', () => {
     onCommand?.('reset');
