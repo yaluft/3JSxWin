@@ -4,8 +4,8 @@ This is a draft for **you** to review and post yourself. Nothing here has been s
 
 The three.js project has no email-review channel — the right places are:
 
-- **GitHub Discussions:** https://github.com/mrdoob/three.js/discussions (category: "Showcase" to share, or "Ideas" for feature suggestions)
-- **Forum:** https://discourse.threejs.org/ (the "Showcase & Discussion" section)
+- **GitHub Discussions:** <https://github.com/mrdoob/three.js/discussions> (category: "Showcase" to share, or "Ideas" for feature suggestions)
+- **Forum:** <https://discourse.threejs.org/> (the "Showcase & Discussion" section)
 
 Cold-emailing the maintainers is discouraged and usually goes unanswered; a Showcase post
 is how three.js projects normally get eyes and feedback. Pick one, paste, edit to taste.

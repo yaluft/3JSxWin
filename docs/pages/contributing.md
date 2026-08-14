@@ -4,14 +4,12 @@ title: Contributing
 nav_order: 4
 ---
 
-# Contributing
-{: .no_toc }
+# Contributing {: .no_toc }
 
 Backdrop is small enough to read in an afternoon and broad enough to learn from: Win32, WPF, WebView2, and GLSL all in one codebase.
 {: .fs-6 .fw-300 }
 
-## Table of contents
-{: .no_toc .text-delta }
+## Table of contents {: .no_toc .text-delta }
 
 1. TOC
 {:toc}
@@ -100,7 +98,7 @@ Before opening a PR, run through:
 
 Present tense, imperative, explaining *why*:
 
-```
+```text
 Verify SetParent with GetAncestor instead of GetParent
 
 GetParent returns the owner, not the parent, for a window still

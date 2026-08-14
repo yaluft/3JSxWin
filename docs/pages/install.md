@@ -4,14 +4,12 @@ title: Install
 nav_order: 2
 ---
 
-# Install
-{: .no_toc }
+# Install {: .no_toc }
 
 Roughly ten minutes, most of it waiting on the SDK download.
 {: .fs-6 .fw-300 }
 
-## Table of contents
-{: .no_toc .text-delta }
+## Table of contents {: .no_toc .text-delta }
 
 1. TOC
 {:toc}
@@ -34,7 +32,7 @@ Visual Studio is not required. VS Code with the C# Dev Kit extension works, and 
 
 Put the project somewhere without spaces or OneDrive sync:
 
-```
+```text
 C:\dev\Win11Backdrop
 ```
 

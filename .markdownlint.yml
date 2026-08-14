@@ -7,6 +7,10 @@ default: true
 MD024:
   siblings_only: true
 
+# Do not treat YAML front-matter title as a top-level heading
+MD025:
+  front_matter_title: ""
+
 # Line length — disable for table-heavy docs
 MD013: false
 

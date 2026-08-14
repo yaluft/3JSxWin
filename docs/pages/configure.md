@@ -4,14 +4,12 @@ title: Configure
 nav_order: 3
 ---
 
-# Configure
-{: .no_toc }
+# Configure {: .no_toc }
 
 All scene settings live in a single JSON file. No restart needed for most changes.
 {: .fs-6 .fw-300 }
 
-## Table of contents
-{: .no_toc .text-delta }
+## Table of contents {: .no_toc .text-delta }
 
 1. TOC
 {:toc}
