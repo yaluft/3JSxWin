@@ -32,6 +32,8 @@ jobs:
             --exclude "localhost"
             --exclude "^mailto:"
             --exclude "plausible.io"
+            --exclude "claude\.ai"
+            --exclude "yaluft\.github\.io"
             '**/*.md'
           fail: true
 

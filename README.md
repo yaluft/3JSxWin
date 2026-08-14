@@ -52,7 +52,7 @@ This project sits in the same general space as the Microsoft desktop and develop
 - [Microsoft/WinUI-Gallery](https://github.com/microsoft/WinUI-Gallery)
 - [Microsoft/PowerToys](https://github.com/microsoft/PowerToys)
 - [Microsoft/terminal](https://github.com/microsoft/terminal)
-- [Microsoft/WindowsDesktop](https://github.com/microsoft/WindowsDesktop)
+- [dotnet/windowsdesktop](https://github.com/dotnet/windowsdesktop)
 
 This project also benefited from exploring modern desktop and browser hosting patterns in the Windows ecosystem, and from working with Claude during the design and debugging process.
 

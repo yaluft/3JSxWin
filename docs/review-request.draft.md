@@ -4,8 +4,8 @@ This is a draft for **you** to review and post yourself. Nothing here has been s
 
 The three.js project has no email-review channel — the right places are:
 
-- **GitHub Discussions:** <https://github.com/mrdoob/three.js/discussions> (category: "Showcase" to share, or "Ideas" for feature suggestions)
-- **Forum:** <https://discourse.threejs.org/> (the "Showcase & Discussion" section)
+- **GitHub Issues:** <https://github.com/mrdoob/three.js/issues> (for feedback on integration or API use)
+- **Forum:** <https://discourse.threejs.org/> (the "Showcase & Projects" section is the best place to share)
 
 Cold-emailing the maintainers is discouraged and usually goes unanswered; a Showcase post
 is how three.js projects normally get eyes and feedback. Pick one, paste, edit to taste.
@@ -23,7 +23,7 @@ wallpaper — behind the icons, on the real `WorkerW` layer, via a WebView2 host
 full-screen aurora shader plus a GPU-animated points field (the "motes"), spans multiple
 monitors as one continuous canvas, and has an on-scene console for tuning the look live.
 
-- Repo: <https://github.com/YOUR_USERNAME/Win11Backdrop>
+- Repo: <https://github.com/yaluft/3JSxWin>
 - three.js r185, vendored (MIT), no CDN — the scene works fully offline.
 
 The visuals lean on patterns straight from the official examples (`webgl_shaders_ocean` for
@@ -50,7 +50,7 @@ Thanks!
 
 ## Notes before you post
 
-- Replace `YOUR_USERNAME` with your actual GitHub handle, and make the repo public first.
+- Make the repo public before posting.
 - If you enabled GitHub Pages (there's now a minimal `_config.yml`), link the Pages URL too.
 - Keep it in Showcase unless you have a concrete API request — Ideas is for specific
   three.js feature proposals, not project feedback.

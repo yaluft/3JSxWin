@@ -8,9 +8,11 @@ nav_order: 1
 
 A Windows 11 desktop wallpaper app that renders a live **three.js aurora scene** behind your icons and taskbar, using WebView2, WPF, and Win32 desktop integration.
 
+<!-- lychee-ignore-start -->
 <p align="center">
   <img src="{{ '/assets/video/preview.gif' | relative_url }}" alt="Aurora wallpaper demo" style="max-width:720px;border-radius:8px;" />
 </p>
+<!-- lychee-ignore-end -->
 
 ---
 
