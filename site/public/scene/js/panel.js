@@ -142,6 +142,8 @@ export function createPanel(config, { onChange, onCommand } = {}) {
       group: 'installed', key: theme.id, label: theme.label ?? theme.id, type: 'toggle',
     }));
   }
+  const sceneSel = root.querySelector('select[data-key="scene"]');
+  if (sceneSel) syncSceneOptions(sceneSel, draft);
 
   function buildRow(c) {
     if (c.type === 'actions') {
