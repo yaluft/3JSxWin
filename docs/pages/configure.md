@@ -4,14 +4,12 @@ title: Configure
 nav_order: 3
 ---
 
-# Configure
-{: .no_toc }
+# Configure {: .no_toc }
 
 All scene settings live in a single JSON file. No restart needed for most changes.
 {: .fs-6 .fw-300 }
 
-## Table of contents
-{: .no_toc .text-delta }
+## Table of contents {: .no_toc .text-delta }
 
 1. TOC
 {:toc}
@@ -23,7 +21,7 @@ All scene settings live in a single JSON file. No restart needed for most change
 There are two copies of `config.json`:
 
 | Path | Purpose |
-|------|---------|
+| --- | --- |
 | `src\Backdrop\web\config.json` | Source copy — changes here survive the next build. |
 | `dist\web\config.json` | Live copy — what the running app reads. Edit this for quick testing. |
 

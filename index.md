@@ -26,7 +26,7 @@ A Windows 11 desktop wallpaper app that renders a live **three.js aurora scene**
 ## Quick links
 
 | Page | Description |
-|------|-------------|
+| --- | --- |
 | [Install]({% link docs/pages/install.md %}) | Full setup guide, ~10 minutes |
 | [Configure]({% link docs/pages/configure.md %}) | `config.json` reference |
 | [Contributing]({% link docs/pages/contributing.md %}) | Learning path and PR guidelines |

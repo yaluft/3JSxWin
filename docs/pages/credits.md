@@ -13,7 +13,7 @@ Backdrop was designed and written in collaboration with **[Claude](https://claud
 Claude wrote the initial implementation, then found and fixed four real bugs during review:
 
 | Bug | Why it mattered |
-|-----|-----------------|
+| --- | --- |
 | `GetParent` used to verify `SetParent` | Returns the *owner*, not the parent, for a `WS_POPUP` window. A working attach reported as failed. |
 | `SetParent` return value checked for null | Null is the previous parent of a top-level window — success and failure look identical. |
 | `SWP_NOZORDER` after re-parenting | `SetParent` inserts at the top of the sibling z-order, putting the scene over the desktop icons. |

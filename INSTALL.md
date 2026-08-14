@@ -8,7 +8,7 @@ Roughly ten minutes, most of it waiting on the SDK download.
 | --- | --- |
 | Windows 11 | Windows 10 20H1+ also works. |
 | WebView2 Runtime | **Already installed on Windows 11.** Check: Settings → Apps → Installed apps → "Microsoft Edge WebView2 Runtime". If missing, get the Evergreen Standalone Installer from Microsoft. |
-| .NET 8 SDK | https://dotnet.microsoft.com/download/dotnet/8.0 — the **SDK**, x64, not just the runtime. |
+| .NET 8 SDK | <https://dotnet.microsoft.com/download/dotnet/8.0> — the **SDK**, x64, not just the runtime. |
 
 Visual Studio is not required. If you already have it with the **.NET desktop
 development** workload, opening `Win11Backdrop.sln` works too.
@@ -17,7 +17,7 @@ development** workload, opening `Win11Backdrop.sln` works too.
 
 Put it somewhere without spaces or OneDrive sync:
 
-```
+```text
 C:\dev\Win11Backdrop
 ```
 
