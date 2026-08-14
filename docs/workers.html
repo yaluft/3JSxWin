@@ -64,10 +64,24 @@
       if (Array.isArray(section.links) && section.links.length) {
         const ul = document.createElement("ul");
         section.links.forEach((link) => {
+          let safeHref = "";
+          try {
+            const parsed = new URL(link.href, location.href);
+            if (parsed.protocol === "https:" || parsed.protocol === "http:") {
+              safeHref = parsed.href;
+            }
+          } catch (_) {
+            safeHref = "";
+          }
+          if (!safeHref) {
+            return;
+          }
           const li = document.createElement("li");
           const a = document.createElement("a");
-          a.href = link.href;
+          a.href = safeHref;
           a.textContent = link.label;
+          a.rel = "noopener noreferrer";
+          a.target = "_blank";
           li.appendChild(a);
           ul.appendChild(li);
         });
@@ -90,9 +104,9 @@
       } catch (error) {
         document.getElementById("title").textContent = "3JSxWin Workers Page";
         document.getElementById("subtitle").textContent = "Failed to load JSON content.";
-        const pre = document.createElement("code");
-        pre.textContent = String(error);
-        root.appendChild(pre);
+        const errorEl = document.createElement("p");
+        errorEl.textContent = "Please verify that docs/workers.json exists and contains valid JSON.";
+        root.appendChild(errorEl);
       }
     }
 

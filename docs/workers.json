@@ -15,19 +15,19 @@
       "links": [
         {
           "label": "README",
-          "href": "README.md"
+          "href": "https://github.com/yaluft/3JSxWin/blob/main/README.md"
         },
         {
           "label": "Install guide (Markdown)",
-          "href": "docs/pages/install.md"
+          "href": "https://github.com/yaluft/3JSxWin/blob/main/docs/pages/install.md"
         },
         {
           "label": "Configure guide (Markdown)",
-          "href": "docs/pages/configure.md"
+          "href": "https://github.com/yaluft/3JSxWin/blob/main/docs/pages/configure.md"
         },
         {
           "label": "Contributing",
-          "href": "CONTRIBUTING.md"
+          "href": "https://github.com/yaluft/3JSxWin/blob/main/CONTRIBUTING.md"
         }
       ]
     },
