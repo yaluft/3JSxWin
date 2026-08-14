@@ -6,13 +6,17 @@ labels: bug
 
 ## What happened, and what you expected instead
 
-## Diagnostics — run `.\dist\Backdrop.exe --diagnose` and paste the report. It is also on **Copy diagnostics** in the tray menu
+## Diagnostics
+
+Run `.\dist\Backdrop.exe --diagnose` and paste the report. It is also on **Copy diagnostics** in the tray menu.
 
 ```text
 paste here
 ```
 
-## Log — `%LOCALAPPDATA%\Backdrop\backdrop.log`, last 30 lines
+## Log
+
+`%LOCALAPPDATA%\Backdrop\backdrop.log`, last 30 lines:
 
 ```text
 paste here
