@@ -29,10 +29,10 @@ The renderer is a vendored three.js scene (r185, offline). Tune it live with `Ct
 
 ## Features
 
-- Sixteen scenes: Aurora, Tube Dunes, ASCII Tubes, Starwell, Tube Warp, Ion, Kanagawa, Tube Loops, Ember, Bloom, Petrichor, Kelp, Murmur, Cicada, Rime, plus Pulse (anime.js)
-- Nature scenes carry their own generated soundscapes (rain, kelp, flock, cicada, frost)
+- Nine core scenes always loaded: Aurora, Tube Dunes, Starwell, Tube Warp, Ion, Tube Loops, Ember, Kelp, Murmur
+- Optional library under `web/themes/` (Mycelight, Mothwork, Coralnet, Lungclock, Inkatrium, Foldwell, Sporehall, Orreryheart, Threadloom) — files ship, shaders load only after you install them in the console
+- Generated soundscapes (no files); optional themes bring their own graph
 - ASCII scenes use a 32-glyph density ramp, palette-tinted ink, and a 480-column cap
-- Hex ASCII is inspired by [DeoVolenteGames' ascii-renderer](https://deovolentegames.github.io/ascii-renderer/) ([@DeoVolenteGames](https://github.com/DeoVolenteGames))
 - Palette randomizer using real Neovim themes (Catppuccin, Tokyo Night, Rosé Pine, Kanagawa, …)
 - Dual-monitor default: one native-resolution copy per display (`--duplicate-all`)
 - `--window` preview before anything touches the desktop

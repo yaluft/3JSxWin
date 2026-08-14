@@ -5,14 +5,14 @@
 // you are actually doing.
 
 import * as THREE from 'three';
-import { loadConfig } from './config.js?v=8';
+import { loadConfig } from './config.js?v=11';
 import { createMotes } from './motes.js?v=6';
 import { createHud } from './hud.js?v=6';
 import { tellHost, onHostMessage, reportError } from './host.js?v=6';
-import { createScene, nextSceneId, SCENE_IDS, SCENE_META } from './scenes.js?v=14';
-import { findPalette, randomPalette, applyPaletteToConfig } from './palettes.js?v=6';
-import { createLowVibe } from './audio.js?v=8';
-import { createPulse } from './pulse.js?v=1';
+import { createScene, nextSceneId, SCENE_IDS, SCENE_META } from './scenes.js?v=20';
+import { findPalette, randomPalette, applyPaletteToConfig } from './palettes.js?v=7';
+import { createLowVibe } from './audio.js?v=11';
+import { loadCatalog, setInstalled, loadTheme, resolveSceneId, dropTheme } from './theme-catalog.js';
 
 THREE.ColorManagement.enabled = false;
 
@@ -33,6 +33,9 @@ boot().catch((error) => {
 
 async function boot() {
   const config = await loadConfig();
+  await loadCatalog();
+  setInstalled(config.installed);
+  config.scene = resolveSceneId(config.scene);
   const canvas = document.getElementById('stage');
   const hosted = Boolean(globalThis.chrome?.webview);
   const embedded = (() => { try { return window.self !== window.top; } catch { return true; } })();
@@ -44,12 +47,33 @@ async function boot() {
     config.motes.count = 0;
   }
 
-  const silentScenes = new Set([
-    'hexascii', 'terrascii', 'warpscii', 'blobscii', 'wave', 'pulse',
-    'petrichor', 'kelp', 'murmur', 'cicada', 'rime',
-  ]);
-  const motesOn = (config.motes.count | 0) > 0 && !silentScenes.has(config.scene);
+  function CORE_HAS_MOTES(id) {
+    return id === 'aurora' || id === 'starwell' || id === 'ion' || id === 'ember';
+  }
+  const motesOn = (config.motes.count | 0) > 0 && CORE_HAS_MOTES(config.scene);
+
+  let sky;
   const vibe = embedded ? null : createLowVibe(config.audio?.volume ?? 0.2, config.scene);
+
+  function applySceneTune(id) {
+    const tune = config.scenes?.[id];
+    if (tune) {
+      if (!config.aurora) config.aurora = {};
+      if (tune.intensity != null) config.aurora.intensity = tune.intensity;
+      if (tune.speed != null) config.aurora.speed = tune.speed;
+      if (tune.height != null) config.aurora.height = tune.height;
+      if (tune.volume != null) {
+        config.audio ??= {};
+        config.audio.volume = tune.volume;
+      }
+    }
+    sky?.apply(config);
+    const vol = config.audio?.volume;
+    if (vol != null) vibe?.setVolume?.(vol);
+    vibe?.setEnabled?.(config.audio?.enabled !== false);
+  }
+
+  applySceneTune(config.scene);
 
   const renderer = new THREE.WebGLRenderer({
     canvas,
@@ -61,13 +85,13 @@ async function boot() {
   });
   renderer.autoClear = !motesOn;
 
-  let sky = createScene(config.scene, config);
+  let themeMod = await loadTheme(config.scene);
+  vibe?.setThemeModule?.(themeMod);
+  sky = createScene(config.scene, config, themeMod);
   const motes = motesOn ? createMotes(config) : null;
   const hud = createHud(config);
-  const pulse = createPulse(config);
   const rack = hosted || embedded ? null : mountRack();
-  const toast = mountToast();
-  syncPulse();
+  const overlay = mountOverlay();
 
   let rung = nearestRung(config.render.renderScale);
   applyRung(rung, { force: true });
@@ -100,7 +124,7 @@ async function boot() {
     renderer.setSize(width, height, false);
     sky?.setSize(width, height);
     motes?.setSize(width, height, width / Math.max(window.innerWidth, 1));
-    pulse.setSize();
+    sizeOverlay();
   }
 
   function applyRung(index, { force = false } = {}) {
@@ -139,14 +163,17 @@ async function boot() {
     windowStart = now;
   }
 
-  function switchScene(name) {
-    const next = name || config.scene;
+  async function switchScene(name) {
+    const next = resolveSceneId(name || config.scene);
     if (!next) return;
     sky?.dispose?.();
+    sky = null;
     config.scene = next;
+    applySceneTune(next);
+    themeMod = await loadTheme(next);
+    vibe?.setThemeModule?.(themeMod);
     vibe?.setScene?.(next);
-    sky = createScene(next, config);
-    syncPulse();
+    sky = createScene(next, config, themeMod);
     applyRung(rung, { force: true });
     resize();
     paintRack();
@@ -155,17 +182,41 @@ async function boot() {
   }
 
   function applyLive(next) {
+    if (Array.isArray(next.installed)) {
+      const prev = new Set(config.installed ?? []);
+      setInstalled(next.installed);
+      for (const id of prev) {
+        if (!next.installed.includes(id)) dropTheme(id);
+      }
+    }
     if (next.scene && next.scene !== config.scene) {
       Object.assign(config, next);
-      switchScene(next.scene);
+      if (next.palette) config.palette = next.palette;
+      void switchScene(next.scene);
+      return;
+    }
+    if (Array.isArray(next.installed) && resolveSceneId(config.scene) !== config.scene) {
+      Object.assign(config, next);
+      void switchScene('aurora');
       return;
     }
     const palBefore = config.paletteName;
+    const audioWasOff = config.audio?.enabled === false;
     Object.assign(config, next);
     if (next.palette) config.palette = next.palette;
+
+    if (next.audio) {
+      const enabled = config.audio?.enabled !== false;
+      if (config.audio?.volume != null) vibe?.setVolume?.(config.audio.volume);
+      vibe?.setEnabled?.(enabled);
+      if (!enabled) vibe?.stop();
+      else if (audioWasOff) void vibe?.start();
+    }
+
+    if (next.scenes) applySceneTune(config.scene);
     sky?.apply(config);
+
     motes?.apply(config);
-    pulse.apply(config);
     paintRack();
     if (next.paletteName && next.paletteName !== palBefore) announce();
   }
@@ -175,7 +226,6 @@ async function boot() {
     applyPaletteToConfig(config, entry);
     sky?.apply(config);
     motes?.apply(config);
-    pulse.apply(config);
     paintRack();
     syncUrl();
     tellHost({ type: 'live', config });
@@ -187,32 +237,120 @@ async function boot() {
     return findPalette(config.paletteName)?.label ?? config.paletteName;
   }
 
-  function mountToast() {
-    const root = document.createElement('div');
-    root.className = 'toast';
-    root.setAttribute('aria-live', 'polite');
-    root.innerHTML = `
-      <p class="toast__scene" data-toast-scene></p>
-      <p class="toast__blurb" data-toast-blurb></p>
-      <p class="toast__palette" data-toast-palette></p>
-    `;
-    document.body.appendChild(root);
-    return root;
+  function mountOverlay() {
+    const el = document.createElement('canvas');
+    el.className = 'overlay';
+    el.setAttribute('aria-live', 'polite');
+    const ctx = el.getContext('2d', { alpha: true });
+    const tex = new THREE.CanvasTexture(el);
+    tex.minFilter = THREE.LinearFilter;
+    tex.magFilter = THREE.LinearFilter;
+    tex.generateMipmaps = false;
+    const mat = new THREE.MeshBasicMaterial({
+      map: tex,
+      transparent: true,
+      depthTest: false,
+      depthWrite: false,
+      toneMapped: false,
+    });
+    const layer = new THREE.Scene();
+    layer.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), mat));
+    document.body.appendChild(el);
+    return {
+      el, ctx, tex, layer, camera: new THREE.Camera(),
+      until: 0, scene: '', blurb: '', palette: '',
+    };
   }
 
-  let toastTimer = 0;
+  function sizeOverlay() {
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    overlay.el.width = Math.max(1, Math.round(window.innerWidth * dpr));
+    overlay.el.height = Math.max(1, Math.round(window.innerHeight * dpr));
+    overlay.tex.needsUpdate = true;
+  }
+
   function announce() {
     const meta = SCENE_META[config.scene] ?? { label: config.scene, blurb: '' };
-    toast.querySelector('[data-toast-scene]').textContent = meta.label;
-    toast.querySelector('[data-toast-blurb]').textContent = meta.blurb ?? '';
-    toast.querySelector('[data-toast-palette]').textContent = paletteLabel();
-    toast.classList.add('is-on');
-    clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => toast.classList.remove('is-on'), 2400);
+    overlay.scene = meta.label;
+    overlay.blurb = meta.blurb ?? '';
+    overlay.palette = paletteLabel();
+    overlay.until = performance.now() + 3800;
+    tellHost({ type: 'announce', scene: overlay.scene, palette: overlay.palette });
+  }
+
+  function paintOverlay(now) {
+    const ctx = overlay.ctx;
+    const canvas = overlay.el;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    const left = overlay.until - now;
+    if (left <= 0 || !overlay.scene) return;
+
+    const fade = left > 800 ? 1 : Math.max(0, left / 800);
+    const cssW = Math.max(window.innerWidth, 1);
+    const cssH = Math.max(window.innerHeight, 1);
+    ctx.save();
+    ctx.setTransform(canvas.width / cssW, 0, 0, canvas.height / cssH, 0, 0);
+
+    ctx.font = '200 54px "Segoe UI Variable Display", "Segoe UI", sans-serif';
+    const titleW = ctx.measureText(overlay.scene).width;
+    ctx.font = '500 15px "Segoe UI", sans-serif';
+    const palW = ctx.measureText(overlay.palette).width;
+    const boxW = Math.min(cssW - 48, Math.max(320, titleW, palW) + 88);
+    const boxH = 140;
+    const x = (cssW - boxW) / 2;
+    const y = cssH * 0.36;
+
+    ctx.globalAlpha = fade * 0.78;
+    ctx.fillStyle = '#04060c';
+    ctx.beginPath();
+    const r = 18;
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + boxW, y, x + boxW, y + boxH, r);
+    ctx.arcTo(x + boxW, y + boxH, x, y + boxH, r);
+    ctx.arcTo(x, y + boxH, x, y, r);
+    ctx.arcTo(x, y, x + boxW, y, r);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'alphabetic';
+    ctx.globalAlpha = fade;
+    ctx.fillStyle = '#cfe9ff';
+    ctx.font = '200 52px "Segoe UI Variable Display", "Segoe UI", sans-serif';
+    ctx.fillText(overlay.scene, cssW / 2, y + 58);
+
+    if (overlay.blurb) {
+      ctx.globalAlpha = fade * 0.65;
+      ctx.fillStyle = '#9db0c8';
+      ctx.font = '500 13px "Segoe UI", sans-serif';
+      ctx.fillText(overlay.blurb, cssW / 2, y + 86);
+    }
+
+    ctx.globalAlpha = fade;
+    ctx.fillStyle = '#35e3a0';
+    ctx.font = '600 14px "Segoe UI", sans-serif';
+    ctx.fillText(overlay.palette, cssW / 2, y + 114);
+    ctx.restore();
+    overlay.tex.needsUpdate = true;
+  }
+
+  function drawOverlay() {
+    overlay.el.style.visibility = 'hidden';
+    if (overlay.until <= performance.now() || !overlay.scene) return;
+    const prev = renderer.autoClear;
+    renderer.autoClear = false;
+    renderer.render(overlay.layer, overlay.camera);
+    renderer.autoClear = prev;
   }
 
   function paintRack() {
     if (!rack) return;
+    const row = rack.querySelector('.dock__row');
+    if (row) {
+      const chips = SCENE_IDS.map((id) =>
+        `<button type="button" data-scene="${id}">${(SCENE_META[id] ?? { label: id }).label}</button>`).join('');
+      row.innerHTML = `${chips}<button type="button" data-act="shuffle">P</button>`;
+    }
     rack.querySelector('[data-palette]').textContent = paletteLabel();
     for (const btn of rack.querySelectorAll('[data-scene]')) {
       btn.classList.toggle('is-on', btn.dataset.scene === config.scene);
@@ -229,16 +367,6 @@ async function boot() {
       url.searchParams.delete('palette');
     }
     if (url.href !== location.href) history.replaceState(null, '', `${url.pathname}${url.search}`);
-  }
-
-  function syncPulse() {
-    if (config.scene === 'pulse') {
-      canvas.style.visibility = 'hidden';
-      pulse.show();
-    } else {
-      canvas.style.visibility = '';
-      pulse.hide();
-    }
   }
 
   function mountRack() {
@@ -268,13 +396,11 @@ async function boot() {
     lastDraw = now;
 
     hud.update();
-    if (config.scene === 'pulse') {
-      pulse.update(elapsed);
-    } else if (sky) {
+    if (sky) {
       sky.update(elapsed);
       motes?.update(elapsed);
       sky.prerender?.(renderer);
-      const drawMotes = motes && !silentScenes.has(config.scene);
+      const drawMotes = motes && CORE_HAS_MOTES(config.scene);
       if (drawMotes) {
         renderer.clear();
         renderer.render(sky.scene, sky.camera);
@@ -284,8 +410,14 @@ async function boot() {
       }
     }
 
+    paintOverlay(now);
+    drawOverlay();
     drawn++;
     checkBudget(now);
+  }
+
+  function audioAllowed() {
+    return config.audio?.enabled !== false;
   }
 
   function start() {
@@ -296,7 +428,7 @@ async function boot() {
     drawn = 0;
     windowStart = performance.now();
     handle = requestAnimationFrame(frame);
-    void vibe?.start();
+    if (audioAllowed()) void vibe?.start();
   }
 
   function stop() {
@@ -314,12 +446,12 @@ async function boot() {
   document.addEventListener('visibilitychange', () => (document.hidden ? stop() : start()));
   window.addEventListener('keydown', (event) => {
     if (event.target instanceof HTMLInputElement || event.target instanceof HTMLSelectElement) return;
-    void vibe?.start();
+    if (audioAllowed()) void vibe?.start();
     if (event.key === '[') switchScene(nextSceneId(config.scene, -1));
     if (event.key === ']') switchScene(nextSceneId(config.scene, 1));
     if (event.key === 'p' || event.key === 'P') shufflePalette();
   });
-  window.addEventListener('pointerdown', () => { void vibe?.start(); }, { once: false });
+  window.addEventListener('pointerdown', () => { if (audioAllowed()) void vibe?.start(); }, { once: false });
 
   onHostMessage((message) => {
     if (message.type === 'visibility') {
@@ -352,6 +484,7 @@ async function boot() {
   syncUrl();
   running = false;
   start();
+  announce();
 
   tellHost({ type: 'ready' });
 }

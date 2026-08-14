@@ -1,0 +1,13 @@
+{
+  "themes": [
+    { "id": "mycelight", "label": "Mycelight", "blurb": "Hyphae as circuit traces; frost-light packets hop node to node", "family": "machine" },
+    { "id": "mothwork", "label": "Mothwork", "blurb": "A turbine of moth wings shedding iridescent scale dust", "family": "machine" },
+    { "id": "coralnet", "label": "Coralnet", "blurb": "Coral branches as PCB traces; data blooms at the tips", "family": "machine" },
+    { "id": "lungclock", "label": "Lungclock", "blurb": "A ribcage of bellows and valves that breathes light", "family": "hybrid" },
+    { "id": "inkatrium", "label": "Inkatrium", "blurb": "A city folded into a hanging droplet; streets follow the meniscus", "family": "interior" },
+    { "id": "foldwell", "label": "Foldwell", "blurb": "Rooms stacked inside rooms; doorways with the wrong gravity", "family": "interior" },
+    { "id": "sporehall", "label": "Sporehall", "blurb": "A nave whose ribs are pipes; spores are packets", "family": "hybrid" },
+    { "id": "orreryheart", "label": "Orreryheart", "blurb": "Heart chambers that are planetary gears around a beating core", "family": "hybrid" },
+    { "id": "threadloom", "label": "Threadloom", "blurb": "A room that is a loom weaving its own nerves", "family": "hybrid" }
+  ]
+}

@@ -7,73 +7,7 @@ import { createSky } from './sky.js';
 import { ASCII_GBUFFER, ASCII_SCENE_IDS, createAsciiBackdrop } from './ascii.js?v=3';
 export { SCENE_IDS, SCENE_META } from './scenes-meta.js';
 import { SCENE_IDS } from './scenes-meta.js';
-
-const VERTEX = /* glsl */ `
-  varying vec2 vUv;
-  void main() {
-    vUv = uv;
-    gl_Position = vec4(position.xy, 0.0, 1.0);
-  }
-`;
-
-const COMMON = /* glsl */ `
-  precision highp float;
-  varying vec2 vUv;
-  uniform vec2  uResolution;
-  uniform float uTime;
-  uniform vec3  uVoid;
-  uniform vec3  uTide;
-  uniform vec3  uVerdant;
-  uniform vec3  uIris;
-  uniform vec3  uFrost;
-  uniform float uIntensity;
-  uniform float uSpeed;
-  uniform float uHeight;
-  uniform float uHorizonY;
-  uniform float uHorizonGlow;
-  uniform float uReflection;
-  uniform float uStars;
-  uniform float uTwinkle;
-  uniform float uGrain;
-  uniform float uVignette;
-  uniform int   uOctaves;
-
-  float hash21(vec2 p) {
-    p = fract(p * vec2(123.34, 345.45));
-    p += dot(p, p + 34.345);
-    return fract(p.x * p.y);
-  }
-
-  float vnoise(vec2 p) {
-    vec2 i = floor(p);
-    vec2 f = fract(p);
-    vec2 u = f * f * (3.0 - 2.0 * f);
-    float a = hash21(i);
-    float b = hash21(i + vec2(1.0, 0.0));
-    float c = hash21(i + vec2(0.0, 1.0));
-    float d = hash21(i + vec2(1.0, 1.0));
-    return mix(mix(a, b, u.x), mix(c, d, u.x), u.y);
-  }
-
-  float fbm(vec2 p) {
-    float sum = 0.0;
-    float amp = 0.5;
-    mat2 rot = mat2(0.80, 0.60, -0.60, 0.80);
-    for (int i = 0; i < 8; i++) {
-      if (i >= uOctaves) break;
-      sum += amp * vnoise(p);
-      p = rot * p * 2.03;
-      amp *= 0.5;
-    }
-    return sum;
-  }
-
-  vec3 finish(vec3 col, vec2 uv) {
-    col *= clamp(1.0 - uVignette * pow(clamp(length(uv - 0.5) * 1.42, 0.0, 1.0), 2.4), 0.0, 1.0);
-    col += (hash21(gl_FragCoord.xy + fract(uTime) * 137.0) - 0.5) * (uGrain + 1.0 / 255.0);
-    return max(col, 0.0);
-  }
-`;
+import { VERTEX, COMMON } from './shader-lib.js';
 
 const TERRASCII = ASCII_GBUFFER + /* glsl */ `
   // Landscape of horizontal tubes riding a dune field — same ASCII pass as the tube demo.
@@ -132,80 +66,6 @@ const TERRASCII = ASCII_GBUFFER + /* glsl */ `
     float diff = pow(clamp(dot(nrm, sun), 0.0, 1.0), 0.85);
     float spec = pow(clamp(dot(reflect(-sun, nrm), -rd), 0.0, 1.0), 22.0);
     float fog = exp(-hit * 0.07);
-    gl_FragColor = asciiLit(diff, spec, fog, 0.0);
-  }
-`;
-
-const HEXASCII = ASCII_GBUFFER + /* glsl */ `
-  // Instanced vertical tubes deformed by traveling ripples —
-  // https://offscreencanvas.com/renders/webgl-ascii/
-
-  float sdCylY(vec3 p, float r, float h) {
-    vec2 d = abs(vec2(length(p.xz), p.y)) - vec2(r, h);
-    return min(max(d.x, d.y), 0.0) + length(max(d, 0.0));
-  }
-
-  float mapTubes(vec3 p, float t) {
-    float spacing = 0.26;
-    vec2 id = floor(p.xz / spacing);
-    vec2 l = p.xz - (id + 0.5) * spacing;
-    vec2 wp = (id + 0.5) * spacing;
-
-    vec2 src1 = vec2(sin(t * 0.37) * 3.2, cos(t * 0.29) * 3.2);
-    vec2 src2 = vec2(cos(t * 0.21) * 2.6, sin(t * 0.33) * 2.6);
-    float d1 = length(wp - src1);
-    float d2 = length(wp - src2);
-    float wave = sin(d1 * 2.5 - t * 4.2) * exp(-d1 * 0.16)
-               + 0.7 * sin(d2 * 1.9 - t * 3.1) * exp(-d2 * 0.18);
-
-    float h = 0.7 + 1.15 * (0.5 + 0.5 * wave);
-    float r = 0.072 + 0.032 * (0.5 + 0.5 * wave);
-    float lift = wave * 0.38;
-    return sdCylY(vec3(l.x, p.y - lift, l.y), r, h);
-  }
-
-  vec3 tubeNormal(vec3 p, float t) {
-    vec2 e = vec2(0.012, 0.0);
-    float h = mapTubes(p, t);
-    return normalize(vec3(
-      mapTubes(p + e.xyy, t) - h,
-      mapTubes(p + e.yxy, t) - h,
-      mapTubes(p + e.yyx, t) - h
-    ));
-  }
-
-  void main() {
-    float aspect = uResolution.x / max(uResolution.y, 1.0);
-    float t = uTime * (0.28 + uSpeed * 2.0);
-    vec2 p = vec2((vUv.x - 0.5) * aspect, vUv.y - 0.42);
-
-    vec3 ro = vec3(0.15, 1.05, -1.55);
-    vec3 ta = vec3(0.55, 0.05, 2.1);
-    vec3 ww = normalize(ta - ro);
-    vec3 uu = normalize(cross(vec3(0.0, 1.0, 0.0), ww));
-    vec3 vv = cross(ww, uu);
-    vec3 rd = normalize(p.x * uu + p.y * vv + 1.25 * ww);
-
-    float dAcc = 0.0;
-    float hit = -1.0;
-    for (int i = 0; i < 72; i++) {
-      float d = mapTubes(ro + rd * dAcc, t);
-      if (d < 0.006) { hit = dAcc; break; }
-      dAcc += clamp(d, 0.008, 0.22);
-      if (dAcc > 14.0) break;
-    }
-
-    if (hit < 0.0) {
-      gl_FragColor = vec4(0.0);
-      return;
-    }
-
-    vec3 pos = ro + rd * hit;
-    vec3 nrm = tubeNormal(pos, t);
-    vec3 sun = normalize(vec3(0.65, 0.55, 0.35));
-    float diff = pow(clamp(dot(nrm, sun), 0.0, 1.0), 0.8);
-    float spec = pow(clamp(dot(reflect(-sun, nrm), -rd), 0.0, 1.0), 28.0);
-    float fog = exp(-hit * 0.055);
     gl_FragColor = asciiLit(diff, spec, fog, 0.0);
   }
 `;
@@ -337,112 +197,6 @@ const ION = COMMON + /* glsl */ `
   }
 `;
 
-const WAVE = COMMON + /* glsl */ `
-  // Hokusai stripes (onirenaud): cosine crests, foam on peaks, 4 inverted
-  // mini-waves in the troughs so foam cannot leak between bands.
-
-  float waveField(vec2 p, float t) {
-    vec2 c = vec2(-0.28, 0.18);
-    vec2 d = p - c;
-    float ang = atan(d.y, d.x);
-    float rad = length(d);
-    float warp = 0.07 * sin(ang * 5.0 + t * 0.35) + 0.03 * sin(rad * 11.0 - t);
-    return rad * 1.15 + ang * 0.22 + warp - t * 0.08;
-  }
-
-  float stripeProfile(float field) {
-    float major = cos(field * 6.2831853);
-    float mini = cos(field * 6.2831853 * 5.0);
-    return major - 0.30 * mini;
-  }
-
-  float foamClaw(vec2 p, vec2 origin, float ang, float len) {
-    vec2 d = p - origin;
-    float a = atan(d.y, d.x) - ang;
-    float r = length(d);
-    float shaft = smoothstep(0.05, 0.0, abs(a) * r) * smoothstep(len, 0.0, r);
-    float head = exp(-pow(r - len * 0.84, 2.0) * 380.0) * smoothstep(0.2, 0.0, abs(a));
-    return max(shaft * 0.8, head);
-  }
-
-  float boat(vec2 p, vec2 c, float s, float tilt) {
-    vec2 q = p - c;
-    q.xy = mat2(cos(tilt), -sin(tilt), sin(tilt), cos(tilt)) * q;
-    q /= s;
-    float hull = smoothstep(0.08, 0.0, abs(q.y + 0.35 * q.x * q.x)) * smoothstep(0.55, 0.0, abs(q.x));
-    hull *= smoothstep(0.12, -0.02, q.y) * smoothstep(-0.18, -0.02, -q.y);
-    float cabin = smoothstep(0.07, 0.0, abs(q.x + 0.05)) * smoothstep(0.12, 0.0, abs(q.y - 0.07));
-    return max(hull, cabin * 0.85);
-  }
-
-  void main() {
-    vec2 uv = vUv;
-    float aspect = uResolution.x / max(uResolution.y, 1.0);
-    float t = uTime * (0.10 + uSpeed * 0.7);
-    vec2 p = vec2((uv.x - 0.5) * aspect, uv.y);
-
-    vec3 prussian = mix(vec3(0.07, 0.18, 0.42), uTide, 0.18);
-    vec3 deep = mix(vec3(0.03, 0.07, 0.18), uVoid, 0.22);
-    vec3 mid = mix(vec3(0.16, 0.36, 0.62), prussian, 0.4);
-    vec3 foam = mix(vec3(0.93, 0.91, 0.84), uFrost, 0.16);
-    vec3 skyA = mix(vec3(0.80, 0.74, 0.58), vec3(0.55, 0.5, 0.4), 0.15);
-    vec3 skyB = mix(vec3(0.58, 0.68, 0.74), uTide, 0.12);
-    vec3 wood = vec3(0.22, 0.13, 0.07);
-    vec3 fujiSnow = vec3(0.93, 0.93, 0.90);
-
-    vec3 col = mix(skyB, skyA, smoothstep(0.30, 0.95, uv.y));
-
-    vec2 fuji = vec2(0.44 * aspect, 0.41);
-    vec2 fp = p - fuji;
-    float cone = abs(fp.x) * 2.35 - (0.18 - fp.y);
-    float fujiBody = smoothstep(0.02, -0.01, cone) * smoothstep(-0.02, 0.12, fp.y) * smoothstep(0.22, 0.08, fp.y);
-    float cap = smoothstep(0.015, -0.005, abs(fp.x) * 3.4 - (0.205 - fp.y)) * smoothstep(0.155, 0.195, fp.y);
-    col = mix(col, mix(prussian, skyB, 0.5), fujiBody * 0.85);
-    col = mix(col, fujiSnow, cap);
-
-    float field = waveField(p, t);
-    float profile = stripeProfile(field);
-    float crestY = 0.34 + 0.28 * exp(-pow((p.x + 0.06) / 0.64, 2.0)) + 0.05 * sin(p.x * 2.0 + t);
-    float below = crestY - p.y;
-    float water = smoothstep(0.0, 0.01, below);
-
-    float band = abs(fract(field * 7.2) - 0.5);
-    float line = smoothstep(0.10, 0.035, band);
-    float fill = smoothstep(-0.2, 0.55, profile);
-    vec3 waterCol = mix(deep, mid, fill);
-    waterCol = mix(waterCol, prussian, line * 0.85);
-    waterCol = mix(waterCol, foam * 0.35 + mid, smoothstep(0.62, 0.9, profile) * 0.15);
-    col = mix(col, waterCol, water);
-
-    float crestFoam = smoothstep(0.68, 0.92, profile);
-    float away = smoothstep(0.22, 0.0, below);
-    crestFoam *= away * water * uIntensity;
-    col = mix(col, foam, crestFoam * 0.75);
-
-    float lip = exp(-abs(below) * 48.0) * water;
-    col = mix(col, foam, lip * 0.55);
-
-    vec2 curl = vec2(-0.02, crestY + 0.015);
-    float claws = 0.0;
-    for (int i = 0; i < 10; i++) {
-      float fi = float(i);
-      float ang = 0.22 + fi * 0.17 + 0.06 * sin(t * 0.8 + fi);
-      float len = 0.09 + 0.04 * sin(fi * 1.6 + t);
-      claws = max(claws, foamClaw(p, curl + vec2(fi * 0.032, 0.008 * sin(fi + t)), ang, len));
-    }
-    col = mix(col, foam, clamp(claws * uIntensity, 0.0, 1.0));
-
-    float bob = 0.01 * sin(t * 1.2);
-    float boats = boat(p, vec2(-0.16, 0.21 + bob), 0.21, 0.18);
-    boats = max(boats, boat(p, vec2(0.11, 0.175 - bob * 0.6), 0.19, 0.27));
-    boats = max(boats, boat(p, vec2(0.37, 0.155 + bob * 0.4), 0.16, 0.22));
-    col = mix(col, wood, boats * 0.9);
-
-    col += (hash21(gl_FragCoord.xy) - 0.5) * 0.025;
-    gl_FragColor = vec4(finish(col, uv), 1.0);
-  }
-`;
-
 const BLOBSCII = ASCII_GBUFFER + /* glsl */ `
   // Three looping tubes (torus knots) — same density ASCII as the tube demo.
   float sdTorus(vec3 p, vec2 t) {
@@ -529,75 +283,6 @@ const EMBER = COMMON + /* glsl */ `
     float spark = smoothstep(0.18, 0.0, length(f)) * step(0.62, n) * column;
     col += mix(uIris, uFrost, n) * spark * 1.4;
     col += uFrost * exp(-length(p - vec2(0.0, 0.0)) * 8.0) * 0.15 * uHorizonGlow;
-    gl_FragColor = vec4(finish(col, uv), 1.0);
-  }
-`;
-
-const BLOOM = COMMON + /* glsl */ `
-  void main() {
-    vec2 uv = vUv;
-    float aspect = uResolution.x / max(uResolution.y, 1.0);
-    float t = uTime * (0.15 + uSpeed * 0.9);
-    vec2 p = vec2((uv.x - 0.5) * aspect, uv.y - 0.5);
-    float r = length(p);
-    float a = atan(p.y, p.x);
-    float petals = 6.0 + floor(uHeight * 4.0);
-    float petal = 0.5 + 0.5 * cos(a * petals);
-    float open = 0.22 + 0.18 * sin(t * 0.7);
-    float bloom = smoothstep(open + 0.28, open, r / (0.35 + 0.25 * petal));
-    float ring = exp(-pow(r - (open + 0.12), 2.0) * 80.0);
-    vec3 col = mix(uVoid, uTide, smoothstep(0.0, 0.9, r));
-    col = mix(col, uIris, bloom * 0.65 * uIntensity);
-    col = mix(col, uVerdant, bloom * petal * 0.35);
-    col += uFrost * ring * 0.55;
-    col += uFrost * exp(-r * 14.0) * 0.2;
-    gl_FragColor = vec4(finish(col, uv), 1.0);
-  }
-`;
-
-const PETRICHOR = COMMON + /* glsl */ `
-  // First rain on dry earth: warm dust sky, wet ground, two rain layers, rare sheet-lightning.
-  void main() {
-    vec2 uv = vUv;
-    float aspect = uResolution.x / max(uResolution.y, 1.0);
-    float t = uTime * (0.12 + uSpeed * 1.6);
-    vec2 p = vec2((uv.x - 0.5) * aspect, uv.y);
-    float hy = uHorizonY;
-
-    vec3 dust = mix(uTide, uIris, 0.30);
-    vec3 sky = mix(uVoid, dust, smoothstep(hy, 1.0, uv.y) * 0.58);
-    sky = mix(sky, mix(uIris, uTide, 0.52), exp(-abs(uv.y - hy) * 7.2) * 0.48 * uHorizonGlow);
-    sky += uIris * exp(-length(p - vec2(0.22, hy + 0.28)) * 5.5) * 0.12;
-
-    float below = smoothstep(hy + 0.012, hy - 0.02, uv.y);
-    float grit = fbm(p * 5.5 + vec2(0.0, 0.4));
-    vec3 soil = mix(uVoid, mix(uTide, uIris, 0.18), 0.28 + 0.32 * grit);
-    float puddle = smoothstep(0.44, 0.74, fbm(vec2(p.x * 2.8, p.y * 4.2)));
-    float rip = 0.014 * sin(p.x * 36.0 - t * 5.5) * puddle;
-    vec3 refl = mix(uVoid, dust, smoothstep(hy, 0.95, (hy * 2.0 - uv.y) + rip) * 0.55);
-    soil = mix(soil, refl, puddle * uReflection * below);
-
-    vec3 col = mix(sky, soil, below);
-
-    float rain = 0.0;
-    for (int i = 0; i < 2; i++) {
-      float fi = float(i);
-      vec2 g = vec2(p.x * (16.0 + fi * 24.0), uv.y * (3.6 + fi * 3.2) - t * (1.7 + fi * 1.5));
-      vec2 id = floor(g);
-      float n = hash21(id + fi * 19.0);
-      vec2 f = fract(g);
-      float w = 0.016 + 0.022 * n;
-      rain += smoothstep(w, 0.0, abs(f.x - 0.5)) * step(0.52, n) * (0.3 + 0.7 * n)
-            * (0.4 + 0.6 * (1.0 - fi * 0.35));
-    }
-    col += mix(uFrost, uTide, 0.35) * rain * 0.58 * uIntensity;
-
-    float mist = fbm(vec2(p.x * 1.4, uv.y * 2.2 - t * 0.08));
-    col = mix(col, mix(uTide, uFrost, 0.2), mist * 0.12 * (1.0 - below) * uHeight);
-
-    float flash = pow(max(sin(t * 0.19 + 0.4) * 0.5 + 0.5, 0.0), 42.0) * uTwinkle;
-    col += uFrost * flash * 0.38;
-
     gl_FragColor = vec4(finish(col, uv), 1.0);
   }
 `;
@@ -699,121 +384,15 @@ const MURMUR = COMMON + /* glsl */ `
   }
 `;
 
-const CICADA = COMMON + /* glsl */ `
-  // Dusk grassland: heat shimmer, layered blades, a chorus pulse in the colour.
-  void main() {
-    vec2 uv = vUv;
-    float aspect = uResolution.x / max(uResolution.y, 1.0);
-    float t = uTime * (0.10 + uSpeed * 1.1);
-    float shim = 0.0055 * sin(uv.y * 46.0 + t * 3.8) * uv.y;
-    vec2 p = vec2((uv.x - 0.5 + shim) * aspect, uv.y);
-    float hy = uHorizonY * 0.82 + 0.14;
-
-    vec3 warm = mix(uIris, uFrost, 0.45);
-    vec3 sky = mix(mix(uTide, uIris, 0.4), warm, smoothstep(hy, 1.0, uv.y));
-    sky = mix(sky, uVoid, pow(1.0 - uv.y, 2.2) * 0.22);
-    sky += mix(uIris, uFrost, 0.55) * exp(-length(p - vec2(0.22, 0.28 + hy * 0.4)) * 6.2) * 0.5 * uHorizonGlow;
-
-    vec3 col = sky;
-
-    for (int layer = 0; layer < 3; layer++) {
-      float fl = float(layer);
-      float dens = 26.0 + fl * 16.0;
-      float base = hy - 0.03 - fl * 0.09;
-      float id = floor(p.x * dens);
-      float n = hash21(vec2(id, fl + 1.7));
-      float local = fract(p.x * dens) - 0.5;
-      float bladeY = uv.y - base;
-      float h = (0.15 + 0.30 * n) * (0.72 + 0.28 * uHeight);
-      float lean = 0.22 * sin(t * 1.25 + id * 0.37 + fl) * clamp(bladeY / max(h, 0.001), 0.0, 1.0);
-      float shaft = smoothstep(h, h - 0.025, bladeY) * smoothstep(-0.012, 0.02, bladeY);
-      float w = mix(0.22, 0.03, clamp(bladeY / max(h, 0.001), 0.0, 1.0));
-      float body = smoothstep(w, 0.0, abs(local - lean));
-      vec3 bladeCol = mix(mix(uTide, uVoid, 0.35), mix(uVerdant, uIris, 0.28), n);
-      col = mix(col, bladeCol, body * shaft * (0.5 + 0.16 * fl));
-    }
-
-    float pulse = pow(0.5 + 0.5 * sin(t * 6.5), 4.0);
-    col += mix(uVerdant, uIris, 0.45) * pulse * 0.07 * uIntensity;
-
-    gl_FragColor = vec4(finish(col, uv), 1.0);
-  }
-`;
-
-const RIME = COMMON + /* glsl */ `
-  // Hoarfrost on dark twigs: sine trunks, fbm bloom, crystal specks, slow flakes.
-  void main() {
-    vec2 uv = vUv;
-    float aspect = uResolution.x / max(uResolution.y, 1.0);
-    float t = uTime * (0.08 + uSpeed * 0.9);
-    vec2 p = vec2((uv.x - 0.5) * aspect, uv.y);
-
-    vec3 col = mix(uVoid, uTide, 0.18 + 0.22 * uv.y);
-    col += mix(uIris, uFrost, 0.55) * exp(-length(p - vec2(-0.15, 0.78)) * 2.6) * 0.14 * uHorizonGlow;
-
-    float twigs = 0.0;
-    float frost = 0.0;
-    for (int i = 0; i < 8; i++) {
-      float fi = float(i);
-      float seed = hash21(vec2(fi, 4.4));
-      float x0 = (seed - 0.5) * aspect * 1.7;
-      float curve = 0.075 * sin(uv.y * 2.5 + seed * 5.2)
-                  + 0.028 * sin(uv.y * 6.8 + seed * 2.4);
-      float d = abs(p.x - x0 - curve);
-      float taper = mix(0.032, 0.004, clamp(uv.y, 0.0, 1.0));
-      float along = smoothstep(-0.02, 0.05, uv.y) * smoothstep(1.05, 0.20 + seed * 0.5, uv.y);
-      float trunk = smoothstep(taper, 0.0, d) * along;
-      twigs = max(twigs, trunk);
-      float rim = smoothstep(taper * 3.4, taper * 0.85, d) * (1.0 - trunk) * along;
-      frost = max(frost, rim * (0.45 + 0.4 * uHeight));
-
-      float node = 0.18 + hash21(vec2(fi, 8.8)) * 0.58;
-      float side = mix(-1.0, 1.0, step(0.5, seed)) * (0.045 + 0.03 * seed);
-      vec2 spurP = vec2(p.x - x0 - curve, uv.y - node);
-      float spur = smoothstep(0.012, 0.0, abs(spurP.y)) * smoothstep(abs(side), 0.0, abs(spurP.x - side * 0.5));
-      spur *= step(0.0, spurP.x * sign(side) + 0.002);
-      twigs = max(twigs, spur * 0.65);
-      frost = max(frost, spur * 0.8);
-    }
-
-    float grow = 0.7 + 0.3 * sin(t * 0.28);
-    frost *= grow * uIntensity;
-
-    vec2 cg = p * 24.0;
-    float crystal = step(0.86, hash21(floor(cg))) * frost
-                  * exp(-length(fract(cg) - 0.5) * 8.0);
-
-    col = mix(col, mix(uVoid, uTide, 0.25), twigs * 0.95);
-    col = mix(col, mix(uTide, uFrost, 0.55), clamp(frost * 0.9, 0.0, 1.0));
-    col += uFrost * frost * 0.22;
-    col += uFrost * crystal * 1.2;
-
-    vec2 fg = vec2(p.x * 18.0, uv.y * 12.0 - t * 0.32);
-    vec2 ff = fract(fg) - 0.5;
-    float flake = smoothstep(0.18, 0.0, length(ff))
-                * step(0.945 - uStars * 0.02, hash21(floor(fg)))
-                * (0.25 + 0.75 * uTwinkle);
-    col += uFrost * flake * 0.55;
-
-    gl_FragColor = vec4(finish(col, uv), 1.0);
-  }
-`;
-
 const FRAGMENTS = {
   terrascii: TERRASCII,
-  hexascii: HEXASCII,
   starwell: STARWELL,
   warpscii: WARPSCII,
   ion: ION,
-  wave: WAVE,
   blobscii: BLOBSCII,
   ember: EMBER,
-  bloom: BLOOM,
-  petrichor: PETRICHOR,
   kelp: KELP,
   murmur: MURMUR,
-  cicada: CICADA,
-  rime: RIME,
 };
 
 function createShaderBackdrop(fragment, config) {
@@ -902,12 +481,13 @@ function createShaderBackdrop(fragment, config) {
   };
 }
 
-export function createScene(name, config) {
+export function createScene(name, config, themeMod = null) {
+  if (themeMod?.fragment) return createShaderBackdrop(COMMON + themeMod.fragment, config);
   const id = SCENE_IDS.includes(name) ? name : 'aurora';
   if (id === 'aurora') return createSky(config);
-  if (id === 'pulse') return null;
-  if (ASCII_SCENE_IDS.has(id)) return createAsciiBackdrop(FRAGMENTS[id], config, id);
-  return createShaderBackdrop(FRAGMENTS[id], config);
+  if (ASCII_SCENE_IDS.has(id) && FRAGMENTS[id]) return createAsciiBackdrop(FRAGMENTS[id], config, id);
+  if (FRAGMENTS[id]) return createShaderBackdrop(FRAGMENTS[id], config);
+  return createSky(config);
 }
 
 export function nextSceneId(current, delta = 1) {

@@ -87,6 +87,14 @@ export function randomPalette(exceptId) {
 
 export function applyPaletteToConfig(config, entry) {
   config.paletteName = entry.id;
+  if (entry.id === 'custom') {
+    const custom = config.customPalette;
+    if (custom) {
+      config.palette = { ...config.palette, ...custom };
+      if (config.motes) config.motes.color = custom.frost;
+    }
+    return config;
+  }
   config.palette = { ...config.palette, ...entry.palette };
   if (config.motes) config.motes.color = entry.palette.frost;
   return config;
