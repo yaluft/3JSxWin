@@ -108,9 +108,10 @@ body {
 
 .dock__row {
   display: flex;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
+  justify-content: center;
   gap: 6px;
-  overflow-x: auto;
+  max-width: min(1100px, calc(100vw - 40px));
 }
 
 .dock button {
@@ -133,6 +134,51 @@ body {
   font-size: 10px;
   text-align: center;
   color: rgb(157 176 200 / 70%);
+}
+
+/* ------------------------------------------------------------- toast ----- */
+
+.toast {
+  position: fixed;
+  left: 50%;
+  top: 11%;
+  transform: translateX(-50%);
+  z-index: 9;
+  text-align: center;
+  color: var(--frost);
+  font-family: "Segoe UI Variable Display", "Segoe UI Variable", "Segoe UI", system-ui, sans-serif;
+  text-shadow: 0 2px 28px rgb(4 6 12 / 90%);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+
+.toast.is-on { opacity: 1; }
+
+.toast__scene {
+  font-size: clamp(28px, 4.4vmin, 64px);
+  font-weight: 200;
+  letter-spacing: -0.03em;
+  line-height: 1;
+}
+
+.toast__blurb {
+  margin-top: 0.55em;
+  font-family: "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+  font-size: clamp(11px, 1.2vmin, 16px);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.62;
+}
+
+.toast__palette {
+  margin-top: 0.45em;
+  font-family: "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+  font-size: clamp(12px, 1.3vmin, 18px);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--verdant);
+  opacity: 0.88;
 }
 
 /* ------------------------------------------------------------- console ---- */

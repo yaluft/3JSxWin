@@ -5,9 +5,9 @@
 </p>
 
 <p align="center">
-  <a href="https://yakupov.xyz"><img src="https://img.shields.io/badge/live-yakupov.xyz-35e3a0?style=flat-square" alt="live site" /></a>
+  <a href="https://yakupov.xyz/"><img src="https://img.shields.io/badge/live-yakupov.xyz-35e3a0?style=flat-square" alt="live site" /></a>
   <a href="https://yakupov.xyz/install"><img src="https://img.shields.io/badge/install-one--liner-6e5bff?style=flat-square" alt="install" /></a>
-  <a href="https://yakupov.xyz"><img src="https://hits.sh/yakupov.xyz.svg?style=flat-square&label=views" alt="live views" /></a>
+  <a href="https://yakupov.xyz/"><img src="https://hits.sh/yakupov.xyz.svg?style=flat-square&label=views" alt="live views" /></a>
   <a href="https://github.com/yaluft/3JSxWin/actions/workflows/ci.yml"><img src="https://github.com/yaluft/3JSxWin/actions/workflows/ci.yml/badge.svg" alt="ci" /></a>
 </p>
 
@@ -15,9 +15,11 @@
   <code>threejs</code> · <code>windows-11</code> · <code>wallpaper</code> · <code>webview2</code> · <code>wpf</code> · <code>glsl</code> · <code>neovim</code>
 </p>
 
-A live [three.js](https://threejs.org) aurora as a Windows 11 wallpaper. The scene sits on the real desktop `WorkerW` layer — behind your icons, behind the taskbar — hosted in WebView2 from a small WPF app.
+A live [three.js](https://threejs.org) scene as a Windows 11 wallpaper. It sits on the real desktop `WorkerW` layer — behind your icons, behind the taskbar — hosted in WebView2 from a small WPF app.
 
-**Live:** [yakupov.xyz](https://yakupov.xyz) · **Install:** [yakupov.xyz/install](https://yakupov.xyz/install) · `]` cycles scenes · `P` shuffles a Neovim palette
+**Site:** [yakupov.xyz](https://yakupov.xyz/) · **Scenes:** [yakupov.xyz/scene](https://yakupov.xyz/scene/) · **Install:** [yakupov.xyz/install](https://yakupov.xyz/install)
+
+`]` cycles scenes · `P` shuffles a Neovim palette · the name of the scene and palette flashes on each switch
 
 ## Why
 
@@ -27,13 +29,14 @@ The renderer is a vendored three.js scene (r185, offline). Tune it live with `Ct
 
 ## Features
 
-- Eleven scenes: aurora, lattice, hex ASCII, starwell, caustic, ion, Kanagawa, silk, ember, bloom, plus Pulse (anime.js)
+- Sixteen scenes: Aurora, Tube Dunes, ASCII Tubes, Starwell, Tube Warp, Ion, Kanagawa, Tube Loops, Ember, Bloom, Petrichor, Kelp, Murmur, Cicada, Rime, plus Pulse (anime.js)
+- Nature scenes carry their own generated soundscapes (rain, kelp, flock, cicada, frost)
+- ASCII scenes use a 32-glyph density ramp, palette-tinted ink, and a 480-column cap
 - Hex ASCII is inspired by [DeoVolenteGames' ascii-renderer](https://deovolentegames.github.io/ascii-renderer/) ([@DeoVolenteGames](https://github.com/DeoVolenteGames))
-- Low-vibe drone at 20% volume (click or key once in a browser if autoplay is blocked)
 - Palette randomizer using real Neovim themes (Catppuccin, Tokyo Night, Rosé Pine, Kanagawa, …)
-- Aurora shader + GPU motes, one continuous canvas across monitors
+- Dual-monitor default: one native-resolution copy per display (`--duplicate-all`)
 - `--window` preview before anything touches the desktop
-- Tray icon: window/desktop toggle, reload, diagnostics, quit
+- Tray icon: window/desktop toggle, layout, reload, diagnostics, quit
 - On-scene console (`Ctrl+Alt+B`) with live sliders and colour pickers
 - Startup shortcut — no admin, no registry
 - Adaptive quality ladder so it can sit in the background for hours
@@ -73,6 +76,7 @@ The window disappears in desktop mode. A tray icon is the way back:
 | Action | What it does |
 | --- | --- |
 | Show in a window | Pull the scene off the desktop |
+| Desktop layout | Single, span all, or duplicate on every monitor |
 | Reload scene | Re-read `dist\web\config.json` |
 | Open scene folder | Jump to `dist\web\` |
 | Open DevTools | Needs `--devtools` on the command line |
@@ -81,13 +85,18 @@ The window disappears in desktop mode. A tray icon is the way back:
 
 Double-click the tray icon to toggle window and desktop mode.
 
+With two or more monitors the default is **duplicate** (one scene per display at native resolution). The tray pick is remembered.
+
 ```powershell
-.\dist\Backdrop.exe --span-all        # one scene across every monitor
+.\dist\Backdrop.exe --duplicate-all   # one copy per monitor (default on dual screen)
+.\dist\Backdrop.exe --span-all        # one canvas across every monitor
 .\dist\Backdrop.exe --monitor 1       # second monitor from the left only
-.\install-startup.ps1                 # start with Windows
+.\install-startup.ps1
 .\install-startup.ps1 -Arguments "--span-all"
 .\install-startup.ps1 -Remove
 ```
+
+Win+`]` next scene · Win+`[` previous · Win+`P` shuffle palette. Each switch shows the scene name and palette for a couple of seconds.
 
 ### Tune the scene
 
@@ -111,6 +120,7 @@ The aurora is a full-screen shader quad; the motes are a GPU points field. Both 
 | Nothing happens | Read `%LOCALAPPDATA%\Backdrop\backdrop.log` |
 | "Already running" | It is in the notification overflow |
 | Running, but blank | Look for `Attached to WorkerW`. If not, `.\dist\Backdrop.exe --diagnose` |
+| Only one monitor | Tray → Desktop layout → Duplicate on all monitors |
 | Covers icons | Another wallpaper tool owns the layer — close Wallpaper Engine / Lively / Rainmeter |
 | Black after unplug / DPI change | It re-attaches in ~4s; otherwise **Reload scene** |
 | Old wallpaper after reboot | Expected until you run `.\install-startup.ps1` |
@@ -124,7 +134,15 @@ Full walkthrough: [INSTALL.md](INSTALL.md). Config reference: [docs/pages/config
 
 ## Site
 
-The README and a live browser preview of the scene are served from a Cloudflare Worker at [yakupov.xyz](https://yakupov.xyz). From `site/`:
+The landing page, installer, and a live browser preview of the scene are served from a Cloudflare Worker at [yakupov.xyz](https://yakupov.xyz/).
+
+| Path | Page |
+| --- | --- |
+| [yakupov.xyz](https://yakupov.xyz/) | Landing page |
+| [yakupov.xyz/scene](https://yakupov.xyz/scene/) | Live scene preview |
+| [yakupov.xyz/install](https://yakupov.xyz/install) | Install notes |
+
+From `site/`:
 
 ```powershell
 npm install
@@ -133,7 +151,7 @@ npx wrangler deploy
 
 ## Contributing
 
-Small enough to read in an afternoon; wide enough to touch Win32, WPF, WebView2, and GLSL. See [CONTRIBUTING.md](CONTRIBUTING.md).
+Small enough to read in an afternoon; wide enough to touch Win32, WPF, WebView2, and GLSL. See [CONTRIBUTING.md](CONTRIBUTING.md). New scene recipe: [docs/add-a-scene.md](docs/add-a-scene.md).
 
 Helpful areas: multi-monitor layout, WorkerW attach reliability, low-end GPU budgets, presets, shader polish.
 

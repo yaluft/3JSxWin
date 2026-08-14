@@ -39,6 +39,8 @@ If you do get stuck with an invisible backdrop: the tray icon is still there, an
 in `DesktopLayer.cs`, `MonitorLayout.cs`, and `ForegroundWatcher.cs`. Keep it that way —
 it makes the interop layer auditable at a glance.
 
+**Add a wallpaper.** Follow [docs/add-a-scene.md](docs/add-a-scene.md). Open an enhancement issue first if the idea is larger than one scene.
+
 ## A learning path
 
 Roughly increasing difficulty. Each one is a real improvement, not busywork.

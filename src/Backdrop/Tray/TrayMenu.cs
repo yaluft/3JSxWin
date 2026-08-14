@@ -17,12 +17,16 @@ internal sealed class TrayMenu : IDisposable
     [DllImport("user32.dll", SetLastError = true)]
     private static extern bool DestroyIcon(IntPtr hIcon);
 
-    private readonly MainWindow _window;
+    private readonly SceneHost _host;
     private NotifyIcon? _icon;
     private IntPtr _iconHandle;
     private ToolStripMenuItem? _modeItem;
+    private ToolStripMenuItem? _layoutMenu;
+    private ToolStripMenuItem? _singleItem;
+    private ToolStripMenuItem? _spanItem;
+    private ToolStripMenuItem? _duplicateItem;
 
-    internal TrayMenu(MainWindow window) => _window = window;
+    internal TrayMenu(SceneHost host) => _host = host;
 
     internal void Install()
     {
@@ -30,17 +34,27 @@ internal sealed class TrayMenu : IDisposable
 
         _modeItem = new ToolStripMenuItem("Show in a window", null, (_, _) =>
         {
-            _window.ToggleMode();
+            _host.ToggleWindowedMode();
             RefreshModeLabel();
         });
 
+        _singleItem = new ToolStripMenuItem("Single monitor", null, (_, _) => SetLayout(LayoutMode.Single));
+        _spanItem = new ToolStripMenuItem("Span all monitors", null, (_, _) => SetLayout(LayoutMode.SpanAll));
+        _duplicateItem = new ToolStripMenuItem("Duplicate on all monitors", null, (_, _) => SetLayout(LayoutMode.Duplicate));
+
+        _layoutMenu = new ToolStripMenuItem("Desktop layout");
+        _layoutMenu.DropDownItems.Add(_singleItem);
+        _layoutMenu.DropDownItems.Add(_spanItem);
+        _layoutMenu.DropDownItems.Add(_duplicateItem);
+
         menu.Items.Add(_modeItem);
+        menu.Items.Add(_layoutMenu);
         menu.Items.Add(new ToolStripSeparator());
-        menu.Items.Add(new ToolStripMenuItem("Reload scene", null, (_, _) => _window.ReloadScene()));
-        menu.Items.Add(new ToolStripMenuItem("Open scene folder", null, (_, _) => _window.OpenSceneFolder()));
-        menu.Items.Add(new ToolStripMenuItem("Open DevTools", null, (_, _) => _window.OpenDevTools()));
-        menu.Items.Add(new ToolStripMenuItem("Open log", null, (_, _) => _window.OpenLog()));
-        menu.Items.Add(new ToolStripMenuItem("Copy diagnostics", null, (_, _) => _window.CopyDiagnostics()));
+        menu.Items.Add(new ToolStripMenuItem("Reload scene", null, (_, _) => _host.ReloadScene()));
+        menu.Items.Add(new ToolStripMenuItem("Open scene folder", null, (_, _) => _host.OpenSceneFolder()));
+        menu.Items.Add(new ToolStripMenuItem("Open DevTools", null, (_, _) => _host.OpenDevTools()));
+        menu.Items.Add(new ToolStripMenuItem("Open log", null, (_, _) => _host.OpenLog()));
+        menu.Items.Add(new ToolStripMenuItem("Copy diagnostics", null, (_, _) => _host.CopyDiagnostics()));
         menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add(new ToolStripMenuItem("Quit Backdrop", null, (_, _) => Application.Current.Shutdown()));
         menu.Items.Add(new ToolStripMenuItem("Kill Backdrop", null, (_, _) =>
@@ -59,17 +73,33 @@ internal sealed class TrayMenu : IDisposable
 
         _icon.DoubleClick += (_, _) =>
         {
-            _window.ToggleMode();
+            _host.ToggleWindowedMode();
             RefreshModeLabel();
         };
 
         RefreshModeLabel();
+        RefreshLayoutLabel();
+    }
+
+    private void SetLayout(LayoutMode mode)
+    {
+        _host.SetLayoutMode(mode);
+        RefreshLayoutLabel();
     }
 
     private void RefreshModeLabel()
     {
-        if (_modeItem is null) return;
-        _modeItem.Text = _window.IsWindowedMode ? "Put back on the desktop" : "Show in a window";
+        if (_modeItem is null || _layoutMenu is null) return;
+        _modeItem.Text = _host.IsWindowedMode ? "Put back on the desktop" : "Show in a window";
+        _layoutMenu.Enabled = !_host.IsWindowedMode;
+    }
+
+    private void RefreshLayoutLabel()
+    {
+        if (_singleItem is null || _spanItem is null || _duplicateItem is null) return;
+        _singleItem.Checked = _host.Mode == LayoutMode.Single;
+        _spanItem.Checked = _host.Mode == LayoutMode.SpanAll;
+        _duplicateItem.Checked = _host.Mode == LayoutMode.Duplicate;
     }
 
     /// <summary>Prefers the shipped app.ico; draws a fallback if it is missing.</summary>

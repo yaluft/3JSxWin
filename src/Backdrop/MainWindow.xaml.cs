@@ -24,23 +24,35 @@ public partial class MainWindow : Window
     private readonly string _webRoot;
     private readonly DispatcherTimer _guard;
     private readonly DispatcherTimer _retry;
-    private readonly ForegroundWatcher _foreground;
-    private readonly Hotkey _hotkey;
+    private readonly CoreWebView2Environment? _sharedEnvironment;
+    private RECT _bounds;
     private int _attempts;
 
     private IntPtr _hwnd;
     private LayerResult _layer;
     private bool _attached;
     private bool _ready;
-    private ConsoleWindow? _console;
-    private CoreWebView2Environment? _environment;
 
     internal bool IsWindowedMode { get; private set; }
 
-    internal MainWindow(CommandLineOptions options)
+    /// <summary>Raised when Windows reports a resolution/monitor-topology change, in
+    /// addition to this window's own re-attach. SceneHost listens to rebuild the window
+    /// set in Duplicate mode, where the number of windows itself may need to change.</summary>
+    internal event Action? DisplayChanged;
+
+    /// <param name="bounds">The physical-pixel rectangle this window should cover. Ignored
+    /// in windowed mode, where the window centers itself at a fixed size instead.</param>
+    /// <param name="sharedEnvironment">
+    /// The one CoreWebView2Environment for the whole app. A second environment on the same
+    /// user-data folder throws ERROR_NOT_IN_CORRECT_STATE, so every window (and the console)
+    /// reuses the same instance rather than creating its own.
+    /// </param>
+    internal MainWindow(CommandLineOptions options, RECT bounds, CoreWebView2Environment sharedEnvironment, bool windowed)
     {
         _options = options;
-        IsWindowedMode = options.Windowed;
+        _bounds = bounds;
+        _sharedEnvironment = sharedEnvironment;
+        IsWindowedMode = windowed;
 
         _webRoot = ResolveWebRoot(options.SceneFolder);
 
@@ -65,15 +77,6 @@ public partial class MainWindow : Window
         // give up and become a window, keep asking until it exists.
         _retry = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(600) };
         _retry.Tick += (_, _) => AttachToDesktop();
-
-        _foreground = new ForegroundWatcher(TimeSpan.FromSeconds(2));
-        _foreground.CoveredChanged += covered => Send(new { type = "visibility", paused = covered });
-
-        // Tap Ctrl+Alt+B to toggle the console window open/closed. The hook fires on a
-        // system thread, so bounce the toggle onto the UI thread.
-        _hotkey = new Hotkey(
-            () => Dispatcher.BeginInvoke(ToggleConsole),
-            cmd => Dispatcher.BeginInvoke(() => Send(new { type = cmd })));
 
         Loaded += OnLoaded;
         Closed += OnClosed;
@@ -119,9 +122,13 @@ public partial class MainWindow : Window
         // our own console window), and reparenting on each one yanks the scene off the layer
         // mid-render, flashing the default wallpaper. The 4-second guard timer already
         // recovers a genuinely lost layer by checking the real parent, with no false hits.
-        if (msg == WM_DISPLAYCHANGE && _attached)
+        if (msg == WM_DISPLAYCHANGE)
         {
-            Dispatcher.BeginInvoke(() => AttachToDesktop(), DispatcherPriority.Background);
+            DisplayChanged?.Invoke();
+            if (_attached)
+            {
+                Dispatcher.BeginInvoke(() => AttachToDesktop(), DispatcherPriority.Background);
+            }
         }
         return IntPtr.Zero;
     }
@@ -144,33 +151,13 @@ public partial class MainWindow : Window
 
         if (IsWindowedMode) CenterOnPrimary();
         else AttachToDesktop();
-
-        _foreground.Start();
-        _hotkey.Start();
     }
 
     // ---------------------------------------------------------------- WebView2
 
     private async Task InitializeWebViewAsync()
     {
-        string userData = Path.Combine(Log.Folder, "WebView2");
-        Directory.CreateDirectory(userData);
-
-        var envOptions = new CoreWebView2EnvironmentOptions
-        {
-            // A backdrop is never the focused window, and Chromium throttles those hard.
-            // These three flags keep requestAnimationFrame running at full rate.
-            AdditionalBrowserArguments = string.Join(' ',
-                "--disable-background-timer-throttling",
-                "--disable-backgrounding-occluded-windows",
-                "--disable-renderer-backgrounding")
-        };
-
-        // One environment for the whole app. The console window reuses this instance rather
-        // than creating its own — a second environment on the same user-data folder throws
-        // ERROR_NOT_IN_CORRECT_STATE (0x8007139F).
-        _environment = await CoreWebView2Environment.CreateAsync(null, userData, envOptions);
-        await Web.EnsureCoreWebView2Async(_environment);
+        await Web.EnsureCoreWebView2Async(_sharedEnvironment);
 
         var core = Web.CoreWebView2;
         Web.DefaultBackgroundColor = System.Drawing.Color.FromArgb(255, 4, 6, 12);
@@ -228,7 +215,7 @@ public partial class MainWindow : Window
         }
     }
 
-    private void Send(object payload)
+    internal void Send(object payload)
     {
         if (!_ready || Web.CoreWebView2 is null) return;
         try
@@ -291,124 +278,16 @@ public partial class MainWindow : Window
         AttachToDesktop();
     }
 
-    // ---------------------------------------------------------------- console
+    // ------------------------------------------------------------- webRoot access
 
-    /// <summary>
-    /// Opens the control console in its own small window, or closes it if already open. The
-    /// scene itself is never touched — it keeps rendering behind the icons — so the desktop,
-    /// taskbar, and apps stay visible while you tune it.
-    /// </summary>
-    private void ToggleConsole()
-    {
-        if (_console is not null)
-        {
-            _console.Close();
-            return;
-        }
-
-        if (_environment is null) return; // WebView2 not up yet
-
-        _console = new ConsoleWindow(_webRoot, _options.DevTools, _environment);
-        _console.Message += OnConsoleMessage;
-        _console.Closed += (_, _) => _console = null;
-        _console.Show();
-        _console.Activate();
-    }
-
-    /// <summary>Routes a message from the console window to the scene and to disk.</summary>
-    private void OnConsoleMessage(JsonElement root)
-    {
-        if (!root.TryGetProperty("type", out var type)) return;
-
-        switch (type.GetString())
-        {
-            case "live":
-                // Relay the edited config to the scene page to apply live, no reload.
-                if (root.TryGetProperty("config", out var cfg))
-                    Send(new { type = "live", config = JsonElementToObject(cfg) });
-                break;
-            case "savecfg":
-                SaveConfig(root);
-                break;
-            case "resetcfg":
-                ResetConfig();
-                break;
-            case "shuffle":
-                Send(new { type = "shuffle" });
-                break;
-            case "close":
-                _console?.Close();
-                break;
-        }
-    }
-
-    /// <summary>
-    /// Forwards a parsed config element to the scene verbatim. Serializing the JsonElement
-    /// straight back into the web message keeps the exact shape the console sent.
-    /// </summary>
-    private static object JsonElementToObject(JsonElement element) =>
-        JsonSerializer.Deserialize<object>(element.GetRawText())!;
-
-    // ----------------------------------------------------------- config I/O
-
-    private string ConfigPath => Path.Combine(_webRoot, "config.json");
-
-    /// <summary>
-    /// Persists the panel's edited config to disk. The scene has already applied the visual
-    /// changes live; this just makes them survive a reload. Settings the running scene cannot
-    /// change in place (mote count, clock) come with reload=true, so we refresh after writing.
-    /// </summary>
-    private void SaveConfig(JsonElement root)
-    {
-        try
-        {
-            if (!root.TryGetProperty("config", out var config)) return;
-
-            // Pretty-print so the file stays hand-editable, matching how it ships.
-            string json = JsonSerializer.Serialize(config, new JsonSerializerOptions { WriteIndented = true });
-
-            // Keep one backup so a bad edit is never a lost config.
-            if (File.Exists(ConfigPath)) File.Copy(ConfigPath, ConfigPath + ".bak", overwrite: true);
-            File.WriteAllText(ConfigPath, json);
-            Log.Write("Config saved from panel.");
-
-            if (root.TryGetProperty("reload", out var reload) && reload.ValueKind == JsonValueKind.True)
-            {
-                ReloadScene();
-            }
-        }
-        catch (Exception ex)
-        {
-            Log.Write("Could not save config", ex);
-        }
-    }
-
-    /// <summary>Restores config.json from its backup, then reloads the scene.</summary>
-    private void ResetConfig()
-    {
-        try
-        {
-            string backup = ConfigPath + ".bak";
-            if (File.Exists(backup))
-            {
-                File.Copy(backup, ConfigPath, overwrite: true);
-                Log.Write("Config reset from backup.");
-                ReloadScene();
-            }
-            else
-            {
-                Log.Write("Reset requested but no config backup exists.");
-            }
-        }
-        catch (Exception ex)
-        {
-            Log.Write("Could not reset config", ex);
-        }
-    }
+    /// <summary>The scene folder this window serves. Every window in a group shares the
+    /// same value (same --scene override applies uniformly), so SceneHost can read any one
+    /// window's copy for the console and config I/O.</summary>
+    internal string WebRoot => _webRoot;
 
     private void ApplyBounds()
     {
-        RECT target = MonitorLayout.TargetBounds(_options.SpanAll, _options.MonitorIndex);
+        RECT target = _bounds;
 
         int x = target.Left;
         int y = target.Top;
@@ -463,9 +342,6 @@ public partial class MainWindow : Window
     {
         if (IsWindowedMode) return;
 
-        // Close the console so it never survives a mode change.
-        _console?.Close();
-
         _guard.Stop();
         _retry.Stop();
         if (_attached) DesktopLayer.Detach(_hwnd);
@@ -497,10 +373,12 @@ public partial class MainWindow : Window
         AttachToDesktop();
     }
 
-    internal void ToggleMode()
+    /// <summary>Changes the physical rectangle this window covers and re-applies it. Used
+    /// when SceneHost switches between Single and Span without changing the window count.</summary>
+    internal void Retarget(RECT bounds)
     {
-        if (IsWindowedMode) SwitchToDesktop();
-        else SwitchToWindowed();
+        _bounds = bounds;
+        if (!IsWindowedMode) ApplyBounds();
     }
 
     internal void ReloadScene() => Web.CoreWebView2?.Reload();
@@ -572,9 +450,7 @@ public partial class MainWindow : Window
     {
         _guard.Stop();
         _retry.Stop();
-        _foreground.Dispose();
-        _hotkey.Dispose();
-        _console?.Close();
+        if (_attached) DesktopLayer.Detach(_hwnd);
         Web?.Dispose();
     }
 }

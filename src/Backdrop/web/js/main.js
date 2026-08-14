@@ -5,13 +5,13 @@
 // you are actually doing.
 
 import * as THREE from 'three';
-import { loadConfig } from './config.js?v=6';
+import { loadConfig } from './config.js?v=8';
 import { createMotes } from './motes.js?v=6';
 import { createHud } from './hud.js?v=6';
 import { tellHost, onHostMessage, reportError } from './host.js?v=6';
-import { createScene, nextSceneId, SCENE_IDS, SCENE_META } from './scenes.js?v=8';
+import { createScene, nextSceneId, SCENE_IDS, SCENE_META } from './scenes.js?v=14';
 import { findPalette, randomPalette, applyPaletteToConfig } from './palettes.js?v=6';
-import { createLowVibe } from './audio.js?v=6';
+import { createLowVibe } from './audio.js?v=8';
 import { createPulse } from './pulse.js?v=1';
 
 THREE.ColorManagement.enabled = false;
@@ -44,9 +44,12 @@ async function boot() {
     config.motes.count = 0;
   }
 
-  const silentScenes = new Set(['hexascii', 'terrascii', 'warpscii', 'blobscii', 'wave', 'pulse']);
+  const silentScenes = new Set([
+    'hexascii', 'terrascii', 'warpscii', 'blobscii', 'wave', 'pulse',
+    'petrichor', 'kelp', 'murmur', 'cicada', 'rime',
+  ]);
   const motesOn = (config.motes.count | 0) > 0 && !silentScenes.has(config.scene);
-  const vibe = embedded ? null : createLowVibe(config.audio?.volume ?? 0.2);
+  const vibe = embedded ? null : createLowVibe(config.audio?.volume ?? 0.2, config.scene);
 
   const renderer = new THREE.WebGLRenderer({
     canvas,
@@ -63,6 +66,7 @@ async function boot() {
   const hud = createHud(config);
   const pulse = createPulse(config);
   const rack = hosted || embedded ? null : mountRack();
+  const toast = mountToast();
   syncPulse();
 
   let rung = nearestRung(config.render.renderScale);
@@ -140,12 +144,14 @@ async function boot() {
     if (!next) return;
     sky?.dispose?.();
     config.scene = next;
+    vibe?.setScene?.(next);
     sky = createScene(next, config);
     syncPulse();
     applyRung(rung, { force: true });
     resize();
     paintRack();
     syncUrl();
+    announce();
   }
 
   function applyLive(next) {
@@ -154,12 +160,14 @@ async function boot() {
       switchScene(next.scene);
       return;
     }
+    const palBefore = config.paletteName;
     Object.assign(config, next);
     if (next.palette) config.palette = next.palette;
     sky?.apply(config);
     motes?.apply(config);
     pulse.apply(config);
     paintRack();
+    if (next.paletteName && next.paletteName !== palBefore) announce();
   }
 
   function shufflePalette() {
@@ -171,12 +179,41 @@ async function boot() {
     paintRack();
     syncUrl();
     tellHost({ type: 'live', config });
+    announce();
+  }
+
+  function paletteLabel() {
+    if (!config.paletteName || config.paletteName === 'boreal') return 'Boreal';
+    return findPalette(config.paletteName)?.label ?? config.paletteName;
+  }
+
+  function mountToast() {
+    const root = document.createElement('div');
+    root.className = 'toast';
+    root.setAttribute('aria-live', 'polite');
+    root.innerHTML = `
+      <p class="toast__scene" data-toast-scene></p>
+      <p class="toast__blurb" data-toast-blurb></p>
+      <p class="toast__palette" data-toast-palette></p>
+    `;
+    document.body.appendChild(root);
+    return root;
+  }
+
+  let toastTimer = 0;
+  function announce() {
+    const meta = SCENE_META[config.scene] ?? { label: config.scene, blurb: '' };
+    toast.querySelector('[data-toast-scene]').textContent = meta.label;
+    toast.querySelector('[data-toast-blurb]').textContent = meta.blurb ?? '';
+    toast.querySelector('[data-toast-palette]').textContent = paletteLabel();
+    toast.classList.add('is-on');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toast.classList.remove('is-on'), 2400);
   }
 
   function paintRack() {
     if (!rack) return;
-    const named = findPalette(config.paletteName);
-    rack.querySelector('[data-palette]').textContent = named?.label ?? 'Boreal';
+    rack.querySelector('[data-palette]').textContent = paletteLabel();
     for (const btn of rack.querySelectorAll('[data-scene]')) {
       btn.classList.toggle('is-on', btn.dataset.scene === config.scene);
     }
@@ -236,6 +273,7 @@ async function boot() {
     } else if (sky) {
       sky.update(elapsed);
       motes?.update(elapsed);
+      sky.prerender?.(renderer);
       const drawMotes = motes && !silentScenes.has(config.scene);
       if (drawMotes) {
         renderer.clear();

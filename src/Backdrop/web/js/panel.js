@@ -43,6 +43,26 @@ const CONTROLS = [
   { group: 'motes', key: 'color', label: 'colour', type: 'color' },
   { group: 'motes', key: 'count', label: 'count', min: 0, max: 2000, step: 50, reload: true },
 
+  { section: 'ascii: dunes' },
+  { group: 'ascii.terrascii', key: 'cellPx', label: 'char size', min: 4, max: 28, step: 0.5 },
+  { group: 'ascii.terrascii', key: 'minCols', label: 'min chars', min: 16, max: 320, step: 2 },
+  { group: 'ascii.terrascii', key: 'maxCols', label: 'max chars', min: 16, max: 640, step: 2 },
+
+  { section: 'ascii: tubes' },
+  { group: 'ascii.hexascii', key: 'cellPx', label: 'char size', min: 4, max: 28, step: 0.5 },
+  { group: 'ascii.hexascii', key: 'minCols', label: 'min chars', min: 16, max: 320, step: 2 },
+  { group: 'ascii.hexascii', key: 'maxCols', label: 'max chars', min: 16, max: 640, step: 2 },
+
+  { section: 'ascii: warp' },
+  { group: 'ascii.warpscii', key: 'cellPx', label: 'char size', min: 4, max: 28, step: 0.5 },
+  { group: 'ascii.warpscii', key: 'minCols', label: 'min chars', min: 16, max: 320, step: 2 },
+  { group: 'ascii.warpscii', key: 'maxCols', label: 'max chars', min: 16, max: 640, step: 2 },
+
+  { section: 'ascii: loops' },
+  { group: 'ascii.blobscii', key: 'cellPx', label: 'char size', min: 4, max: 28, step: 0.5 },
+  { group: 'ascii.blobscii', key: 'minCols', label: 'min chars', min: 16, max: 320, step: 2 },
+  { group: 'ascii.blobscii', key: 'maxCols', label: 'max chars', min: 16, max: 640, step: 2 },
+
   { section: 'palette' },
   { group: 'palette', key: 'verdant', label: 'aurora.lo', type: 'color' },
   { group: 'palette', key: 'iris', label: 'aurora.hi', type: 'color' },
@@ -107,7 +127,7 @@ export function createPanel(config, { onChange, onCommand } = {}) {
     name.textContent = c.label;
     row.appendChild(name);
 
-    const current = c.group === 'root' ? draft[c.key] : draft[c.group]?.[c.key];
+    const current = c.group === 'root' ? draft[c.key] : getGroup(draft, c.group)?.[c.key];
 
     if (c.type === 'color') {
       const input = el('input', { type: 'color', value: current ?? '#ffffff' });
@@ -153,7 +173,7 @@ export function createPanel(config, { onChange, onCommand } = {}) {
 
   function set(c, value) {
     if (c.group === 'root') draft[c.key] = value;
-    else (draft[c.group] ??= {})[c.key] = value;
+    else ensureGroup(draft, c.group)[c.key] = value;
     dirty = true;
     if (c.reload) needsReload = true;
     if (c.key === 'paletteName') {
@@ -220,6 +240,16 @@ function makeDraggable(node, handle) {
 }
 
 const clamp = (n, lo, hi) => Math.min(Math.max(n, lo), hi);
+
+/** 'ascii.terrascii' -> draft.ascii?.terrascii. A plain 'motes' still reads draft.motes. */
+function getGroup(draft, path) {
+  return path.split('.').reduce((node, key) => node?.[key], draft);
+}
+
+/** Same dotted path, but creates any missing intermediate objects along the way. */
+function ensureGroup(draft, path) {
+  return path.split('.').reduce((node, key) => (node[key] ??= {}), draft);
+}
 
 function el(tag, attrs) {
   const node = document.createElement(tag);

@@ -12,6 +12,12 @@ const FALLBACK = {
   stars: { density: 0.8, twinkle: 0.55 },
   motes: { count: 700, color: "#cfe9ff", size: 2.8, drift: 0.35, opacity: 0.62 },
   finish: { grain: 0.028, vignette: 0.5 },
+  ascii: {
+    terrascii: { cellPx: 6, minCols: 80, maxCols: 480 },
+    hexascii: { cellPx: 6, minCols: 80, maxCols: 480 },
+    warpscii: { cellPx: 6, minCols: 80, maxCols: 480 },
+    blobscii: { cellPx: 6, minCols: 80, maxCols: 480 },
+  },
   hud: { enabled: false, corner: 'bottom-right', clock24h: true, locale: 'en-CA' },
   audio: { volume: 0.2 },
 };

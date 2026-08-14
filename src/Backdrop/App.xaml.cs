@@ -17,10 +17,10 @@ public partial class App : Application
     private const string InstanceMutexName = @"Local\Backdrop.SingleInstance";
 
     private Mutex? _instance;
-    private MainWindow? _window;
+    private SceneHost? _host;
     private TrayMenu? _tray;
 
-    protected override void OnStartup(StartupEventArgs e)
+    protected override async void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
 
@@ -59,12 +59,12 @@ public partial class App : Application
         AppDomain.CurrentDomain.UnhandledException += (_, args) =>
             Log.Write("Fatal", args.ExceptionObject as Exception ?? new Exception("unknown"));
 
-        Log.Write($"--- start (windowed={options.Windowed}, spanAll={options.SpanAll}, monitor={options.MonitorIndex}) ---");
+        Log.Write($"--- start (windowed={options.Windowed}, monitor={options.MonitorIndex}) ---");
 
-        _window = new MainWindow(options);
-        _window.Show();
+        _host = new SceneHost(options);
+        await _host.StartAsync();
 
-        _tray = new TrayMenu(_window);
+        _tray = new TrayMenu(_host);
         _tray.Install();
     }
 
@@ -77,6 +77,7 @@ public partial class App : Application
     protected override void OnExit(ExitEventArgs e)
     {
         _tray?.Dispose();
+        _host?.Dispose();
         _instance?.Dispose();
         Log.Write("--- exit ---");
         base.OnExit(e);

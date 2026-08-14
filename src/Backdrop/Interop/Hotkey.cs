@@ -9,6 +9,7 @@ namespace Backdrop.Interop;
 ///
 /// The chord is Ctrl+Alt+B by default. Each press toggles the on-scene console: the host
 /// opens it and pins the scene interactive, or closes it and hands input back to the desktop.
+/// Win+Shift+- triggers a dev-loop rebuild-and-relaunch instead.
 /// </summary>
 internal sealed class Hotkey : IDisposable
 {
@@ -18,12 +19,14 @@ internal sealed class Hotkey : IDisposable
 
     private const int VK_CONTROL = 0x11;
     private const int VK_MENU = 0x12; // Alt
+    private const int VK_SHIFT = 0x10;
     private const int VK_LWIN = 0x5B;
     private const int VK_RWIN = 0x5C;
     private const int VK_TRIGGER = 0x42; // 'B'
     private const int VK_OEM_4 = 0xDB; // [
     private const int VK_OEM_6 = 0xDD; // ]
     private const int VK_P = 0x50;
+    private const int VK_OEM_MINUS = 0xBD; // -
 
     [StructLayout(LayoutKind.Sequential)]
     private struct KBDLLHOOKSTRUCT
@@ -56,6 +59,7 @@ internal sealed class Hotkey : IDisposable
     private readonly HookProc _proc;
     private readonly Action _onPressed;
     private readonly Action<string> _onScene;
+    private readonly Action _onRebuild;
     private IntPtr _hook;
 
     // Auto-repeat sends a stream of WM_KEYDOWNs while the key is held; only the first,
@@ -68,10 +72,12 @@ internal sealed class Hotkey : IDisposable
     /// marshal to the UI thread itself.
     /// </param>
     /// <param name="onScene">Win+[ prev, Win+] next, Win+P shuffle.</param>
-    internal Hotkey(Action onPressed, Action<string>? onScene = null)
+    /// <param name="onRebuild">Win+Shift+-. Also fires on a system thread.</param>
+    internal Hotkey(Action onPressed, Action<string>? onScene = null, Action? onRebuild = null)
     {
         _onPressed = onPressed;
         _onScene = onScene ?? (_ => { });
+        _onRebuild = onRebuild ?? (() => { });
         _proc = HookCallback;
     }
 
@@ -100,6 +106,13 @@ internal sealed class Hotkey : IDisposable
                 {
                     _triggerDown = false;
                 }
+            }
+
+            if (down && WinHeld() && data.vkCode == VK_OEM_MINUS && Held(VK_SHIFT) && _winChord != data.vkCode)
+            {
+                _winChord = data.vkCode;
+                _onRebuild();
+                return (IntPtr)1;
             }
 
             if (down && WinHeld() && data.vkCode is VK_OEM_4 or VK_OEM_6 or VK_P && _winChord != data.vkCode)

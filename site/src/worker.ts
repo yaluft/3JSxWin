@@ -1,4 +1,5 @@
 const PAGES: Record<string, string> = {
+  "/": "/index.html",
   "/install": "/install.html",
   "/install/": "/install.html",
   "/scene": "/scene/index.html",
