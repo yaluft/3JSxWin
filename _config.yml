@@ -1,5 +1,5 @@
-title: Win11Backdrop
-description: A three.js aurora scene living behind your Windows 11 desktop icons.
+title: 3JSxWin
+description: Live three.js scenes living behind your Windows 11 desktop icons.
 baseurl: "/3JSxWin"
 url: "https://yaluft.github.io"
 
@@ -15,7 +15,7 @@ nav_sort: case_insensitive
 search_enabled: true
 
 # Footer links
-footer_content: "Win11Backdrop — MIT License. Docs built with <a href=\"https://just-the-docs.com\">Just the Docs</a>."
+footer_content: "3JSxWin — MIT License. Docs built with <a href=\"https://just-the-docs.com\">Just the Docs</a>."
 
 # Keep build artifacts, sources, and the vendored scene out of the generated site.
 exclude:

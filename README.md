@@ -19,7 +19,7 @@ A live [three.js](https://threejs.org) scene as a Windows 11 wallpaper. It sits 
 
 **Site:** [yakupov.xyz](https://yakupov.xyz/) · **Scenes:** [yakupov.xyz/scene](https://yakupov.xyz/scene/) · **Install:** [yakupov.xyz/install](https://yakupov.xyz/install)
 
-`]` cycles scenes · `P` shuffles a Neovim palette · the name of the scene and palette flashes on each switch
+In the browser, `]` and `[` cycle scenes and `P` shuffles a Neovim palette. On the desktop the same three keys need **Win** held, because the wallpaper never takes focus. Either way the scene name, its one-line blurb, and the palette flash on screen for a couple of seconds on every switch.
 
 ## Why
 
@@ -33,7 +33,7 @@ The renderer is a vendored three.js scene (r185, offline). Tune it live with `Ct
 - Nature scenes carry their own generated soundscapes (rain, kelp, flock, cicada, frost)
 - ASCII scenes use a 32-glyph density ramp, palette-tinted ink, and a 480-column cap
 - Hex ASCII is inspired by [DeoVolenteGames' ascii-renderer](https://deovolentegames.github.io/ascii-renderer/) ([@DeoVolenteGames](https://github.com/DeoVolenteGames))
-- Palette randomizer using real Neovim themes (Catppuccin, Tokyo Night, Rosé Pine, Kanagawa, …)
+- Palette randomizer over twelve real Neovim themes (Catppuccin Mocha, Tokyo Night, Rosé Pine, Kanagawa, Gruvbox, Nord, Everforest, Dracula, One Dark, Oxocarbon, Carbonfox, Solarized Osaka) plus the built-in Boreal
 - Dual-monitor default: one native-resolution copy per display (`--duplicate-all`)
 - `--window` preview before anything touches the desktop
 - Tray icon: window/desktop toggle, layout, reload, diagnostics, quit
@@ -81,7 +81,9 @@ The window disappears in desktop mode. A tray icon is the way back:
 | Open scene folder | Jump to `dist\web\` |
 | Open DevTools | Needs `--devtools` on the command line |
 | Open log | `%LOCALAPPDATA%\Backdrop\backdrop.log` |
-| Quit Backdrop | Exit |
+| Copy diagnostics | Same report as `--diagnose`, straight to the clipboard |
+| Quit Backdrop | Exit cleanly |
+| Kill Backdrop | Last resort if a shutdown hangs |
 
 Double-click the tray icon to toggle window and desktop mode.
 
@@ -91,6 +93,7 @@ With two or more monitors the default is **duplicate** (one scene per display at
 .\dist\Backdrop.exe --duplicate-all   # one copy per monitor (default on dual screen)
 .\dist\Backdrop.exe --span-all        # one canvas across every monitor
 .\dist\Backdrop.exe --monitor 1       # second monitor from the left only
+.\dist\Backdrop.exe --help            # every flag, with its range
 .\install-startup.ps1
 .\install-startup.ps1 -Arguments "--span-all"
 .\install-startup.ps1 -Remove
@@ -100,16 +103,16 @@ Win+`]` next scene · Win+`[` previous · Win+`P` shuffle palette. Each switch s
 
 ### Tune the scene
 
-`Ctrl+Alt+B` opens a floating console. Changes preview live. **SAVE** writes `config.json`; closing without saving discards them. Controls marked `*` (mote count, clock) need a reload, which SAVE does once.
+`Ctrl+Alt+B` opens a floating console. Changes preview live. **SAVE** writes `config.json`; closing without saving discards them. Controls marked `*` (scene picker, mote count, clock) need a reload, which SAVE does once.
 
 Hand-edit `dist\web\config.json` and **Reload scene**, or edit `src\Backdrop\web\config.json` so it survives the next build:
 
 ```jsonc
-"aurora":  { "intensity": 0.95, "speed": 0.055, "height": 0.5 },
-"horizon": { "y": 0.36, "glow": 0.85, "reflection": 0.32 }
+"aurora":  { "intensity": 1.6, "speed": 0.16, "height": 0.95 },
+"horizon": { "y": 0.30, "glow": 1.2, "reflection": 0.65 }
 ```
 
-Raise `horizon.y` toward `0.5` for more sky, or `intensity` toward `1.4` to make it louder.
+Drop `aurora.intensity` toward `0.9` for something you can work in front of. `horizon.y` is where the horizon line sits, `0` at the bottom of the screen and `1` at the top — raise it toward `0.5` for more reflected water and less sky. Every key is listed in [docs/pages/configure.md](docs/pages/configure.md).
 
 The aurora is a full-screen shader quad; the motes are a GPU points field. Both follow official three.js examples — see [CREDITS.md](CREDITS.md).
 
@@ -119,7 +122,7 @@ The aurora is a full-screen shader quad; the motes are a GPU points field. Both 
 | --- | --- |
 | Nothing happens | Read `%LOCALAPPDATA%\Backdrop\backdrop.log` |
 | "Already running" | It is in the notification overflow |
-| Running, but blank | Look for `Attached to WorkerW`. If not, `.\dist\Backdrop.exe --diagnose` |
+| Running, but blank | Look for `Attached to WorkerW` (or `Progman`) in the log. If it is not there, `.\dist\Backdrop.exe --diagnose` |
 | Only one monitor | Tray → Desktop layout → Duplicate on all monitors |
 | Covers icons | Another wallpaper tool owns the layer — close Wallpaper Engine / Lively / Rainmeter |
 | Black after unplug / DPI change | It re-attaches in ~4s; otherwise **Reload scene** |

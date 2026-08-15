@@ -25,6 +25,8 @@ paste here
 ## Setup
 
 - Windows build (`winver`):
+- Installed from the one-liner, or built from source:
 - Monitors and resolutions:
 - GPU:
+- Scene and palette it happens on (or "all"):
 - Other wallpaper tools installed (Lively, Wallpaper Engine, Rainmeter):

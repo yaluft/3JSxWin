@@ -36,8 +36,32 @@ Co-Authored-By: Claude <noreply@anthropic.com>
   - [webgl_points_sprites](https://threejs.org/examples/#webgl_points_sprites) — GPU-animated point field (the motes)
   - [webgl_buffergeometry_custom_attributes_particles](https://threejs.org/examples/#webgl_buffergeometry_custom_attributes_particles) — per-particle size/phase attributes
   - The complete gallery: <https://threejs.org/examples/>
+- **[anime.js](https://animejs.com/)** ([juliangarnier/anime](https://github.com/juliangarnier/anime))
+  v3.2.2 — MIT, © Julian Garnier. Vendored alongside three.js and used by the one 2D
+  scene, Pulse.
 - **[Microsoft.Web.WebView2](https://learn.microsoft.com/microsoft-edge/webview2/)** —
   the Chromium host. Pulled from NuGet at build time.
+
+## Palettes
+
+The palette randomizer ships twelve colour schemes lifted from real Neovim themes. No
+code is taken from any of them — only the five colours the scenes need — and each is
+credited in `web/js/palettes.js` with a link to its source:
+
+[Catppuccin](https://github.com/catppuccin/catppuccin) ·
+[Tokyo Night](https://github.com/folke/tokyonight.nvim) ·
+[Rosé Pine](https://github.com/rose-pine/neovim) ·
+[Kanagawa](https://github.com/rebelot/kanagawa.nvim) ·
+[Gruvbox](https://github.com/ellisonleao/gruvbox.nvim) ·
+[Nord](https://github.com/gbprod/nord.nvim) ·
+[Everforest](https://github.com/sainnhe/everforest) ·
+[Dracula](https://github.com/Mofiqul/dracula.nvim) ·
+[One Dark](https://github.com/navarasu/onedark.nvim) ·
+[Oxocarbon](https://github.com/nyoom-engineering/oxocarbon.nvim) ·
+[Carbonfox](https://github.com/EdenEast/nightfox.nvim) ·
+[Solarized Osaka](https://github.com/craftzdog/solarized-osaka.nvim)
+
+The thirteenth, Boreal, is the project's own default.
 
 ## Prior art
 
@@ -45,3 +69,11 @@ The `WorkerW` re-parenting technique is folklore that predates all of us. Wallpa
 Engine, [Lively Wallpaper](https://github.com/rocksdanister/lively), and a long tail of
 blog posts arrived at the same `0x052C` message independently. Backdrop's contribution
 is documenting *why* each step is needed, in `Interop/DesktopLayer.cs`.
+
+The hex ASCII scene takes its look from
+[DeoVolenteGames' ascii-renderer](https://deovolentegames.github.io/ascii-renderer/)
+([@DeoVolenteGames](https://github.com/DeoVolenteGames)) — the density ramp and the
+tinted-ink treatment, reimplemented here as a shader pass.
+
+The Kanagawa scene is after Hokusai's *The Great Wave off Kanagawa* (c. 1831, public
+domain).

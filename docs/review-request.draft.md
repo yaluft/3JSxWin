@@ -14,17 +14,21 @@ is how three.js projects normally get eyes and feedback. Pick one, paste, edit t
 
 ## Showcase post (suggested)
 
-**Title:** Win11Backdrop — a three.js aurora living behind the Windows 11 desktop icons
+**Title:** 3JSxWin — sixteen three.js scenes living behind the Windows 11 desktop icons
 
 Hi all,
 
-I built a small Windows 11 app that renders a live three.js scene as the desktop
-wallpaper — behind the icons, on the real `WorkerW` layer, via a WebView2 host. It runs a
-full-screen aurora shader plus a GPU-animated points field (the "motes"), spans multiple
-monitors as one continuous canvas, and has an on-scene console for tuning the look live.
+I built a small Windows 11 app that renders live three.js scenes as the desktop
+wallpaper — behind the icons, on the real `WorkerW` layer, via a WebView2 host. There are
+sixteen of them: a full-screen aurora shader with a GPU-animated points field, four
+density-ASCII tube scenes, a moving Great Wave, and five nature scenes that generate their
+own soundscapes from oscillators and filtered noise. It duplicates across monitors at
+native resolution or spans them as one canvas, and has an on-scene console for tuning the
+look live.
 
-- Repo: <https://github.com/YOUR_USERNAME/Win11Backdrop>
-- three.js r185, vendored (MIT), no CDN — the scene works fully offline.
+- Repo: <https://github.com/yaluft/3JSxWin>
+- Live in the browser: <https://yakupov.xyz/scene>
+- three.js r185, vendored (MIT), no CDN — the scenes work fully offline.
 
 The visuals lean on patterns straight from the official examples (`webgl_shaders_ocean` for
 the shader surface, `webgl_points_sprites` and the custom-attributes particles example for
@@ -50,7 +54,7 @@ Thanks!
 
 ## Notes before you post
 
-- Replace `YOUR_USERNAME` with your actual GitHub handle, and make the repo public first.
-- If you enabled GitHub Pages (there's now a minimal `_config.yml`), link the Pages URL too.
+- Check the repo is public before posting, and that <https://yakupov.xyz/scene> is up —
+  a link people can click without installing anything is most of the appeal.
 - Keep it in Showcase unless you have a concrete API request — Ideas is for specific
   three.js feature proposals, not project feedback.

@@ -20,7 +20,7 @@ Backdrop is small enough to read in an afternoon and broad enough to learn from:
 
 ```powershell
 git clone <your-fork-url>
-cd Win11Backdrop
+cd 3JSxWin
 .\build.ps1
 .\dist\Backdrop.exe --window     # always test here first
 ```
@@ -46,8 +46,17 @@ If you do get stuck with an invisible backdrop: the tray icon is still there, an
 | Host window | `src/Backdrop/MainWindow.xaml.cs` | WPF + WebView2 lifecycle. |
 | Win32 | `src/Backdrop/Interop/` | P/Invoke. Read the comments before editing. |
 | Tray | `src/Backdrop/Tray/TrayMenu.cs` | WinForms `NotifyIcon`. |
+| CLI | `src/Backdrop/Startup/CommandLineOptions.cs` | Flags and the `Usage` text. Keep the two in step. |
+| Site | `site/` | The Cloudflare Worker behind yakupov.xyz. `site/sync-scene.ps1` copies the scene into it. |
+
+Inside `web/js/`: `main.js` is the render loop and quality ladder, `scenes.js` holds every fragment shader, `scenes-meta.js` the scene ids and labels, `sky.js` the aurora itself, `ascii.js` the glyph pass, `audio.js` the generated soundscapes, `palettes.js` the Neovim themes, and `panel.js` the `Ctrl+Alt+B` console.
 
 `Interop/NativeMethods.cs` is deliberately dumb: raw P/Invoke, no logic. Keep it that way — it makes the interop layer auditable at a glance.
+
+{: .note }
+ES module imports carry a `?v=` query. Bump it when you change a file, or WebView2 serves the cached copy.
+
+New scene? The recipe is in [`docs/add-a-scene.md`](https://github.com/yaluft/3JSxWin/blob/main/docs/add-a-scene.md).
 
 ---
 
@@ -65,7 +74,7 @@ Roughly increasing difficulty. Each one is a real improvement.
 
 5. **Make the HUD useful** — `hud.enabled: true`, then add weather or CPU load. *Learn: where a wallpaper should and should not do work.*
 
-6. **Multi-monitor per-screen scenes** — Today `--span-all` stretches one scene. One window per monitor, each with its own config, is a real feature. *Learn: `MonitorLayout` and the WorkerW coordinate space.*
+6. **Per-monitor scenes** — `--duplicate-all` already puts one window on each monitor, but all of them read the same config. Giving each display its own scene and palette is a real feature. *Learn: `MonitorLayout` and the WorkerW coordinate space.*
 
 7. **Survive a GPU driver reset** — `webglcontextlost` is handled; a full device removal is not. *Learn: WebView2 process lifetime.*
 
@@ -86,11 +95,14 @@ Before opening a PR, run through:
 
 - [ ] `.\build.ps1` is clean, 0 warnings
 - [ ] `--window` renders
-- [ ] Desktop mode attaches (log says `Attached to WorkerW`)
+- [ ] Desktop mode attaches (log says `Attached to WorkerW`, or `Progman` as a fallback)
 - [ ] Icons still clickable, taskbar still on top
+- [ ] Win+`]` walks every scene without a black frame or a console error
 - [ ] `--diagnose` runs
-- [ ] Tray: reload, mode toggle, quit
+- [ ] Tray: reload, mode toggle, layout, quit
 - [ ] Explorer restart re-attaches the scene
+
+CI runs markdownlint over every `*.md` and builds the project with `--warnaserror`, so a warning is a red check.
 
 ---
 

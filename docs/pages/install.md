@@ -6,13 +6,32 @@ nav_order: 2
 
 # Install {: .no_toc }
 
-Roughly ten minutes, most of it waiting on the SDK download.
+One line if you just want it running; roughly ten minutes if you want to build it.
 {: .fs-6 .fw-300 }
 
 ## Table of contents {: .no_toc .text-delta }
 
 1. TOC
 {:toc}
+
+---
+
+## The short way
+
+```powershell
+irm https://yakupov.xyz/install.ps1 | iex
+```
+
+Downloads the current zip into `%LOCALAPPDATA%\3JSxWin`, pulls the .NET 8 Desktop Runtime through winget if it is missing, adds a Startup shortcut, and opens a preview window. No SDK, no admin, no build.
+
+To undo it:
+
+```powershell
+irm https://yakupov.xyz/install.ps1 -OutFile $env:TEMP\3jsxwin-install.ps1
+& $env:TEMP\3jsxwin-install.ps1 -Uninstall
+```
+
+Everything below is the source build.
 
 ---
 
@@ -28,12 +47,12 @@ Visual Studio is not required. VS Code with the C# Dev Kit extension works, and 
 
 ---
 
-## Step 1 — Unzip or clone
+## Step 1 — Clone
 
 Put the project somewhere without spaces or OneDrive sync:
 
-```text
-C:\dev\Win11Backdrop
+```powershell
+git clone https://github.com/yaluft/3JSxWin.git C:\dev\3JSxWin
 ```
 
 ---
@@ -53,7 +72,7 @@ Expect `8.0.x` or higher. If you get "not recognized", close and reopen the term
 ## Step 3 — Build
 
 ```powershell
-cd C:\dev\Win11Backdrop
+cd C:\dev\3JSxWin
 .\build.ps1
 ```
 
@@ -73,7 +92,7 @@ First run downloads the WebView2 NuGet package (needs a connection). You should 
 .\dist\Backdrop.exe --window
 ```
 
-A 1280×720 window opens with the aurora in it. This confirms the shader compiled and your GPU is working, before anything touches your desktop. Close it when satisfied.
+A 1280×720 window opens with the aurora in it. This confirms the shader compiled and your GPU is working, before anything touches your desktop. Press `]` and `[` to walk through the other fifteen scenes and `P` to shuffle the palette. Close it when satisfied.
 
 ---
 
@@ -88,21 +107,29 @@ The window disappears and the scene takes over your wallpaper, behind your icons
 | Tray action | What it does |
 | --- | --- |
 | **Show in a window** | Pull the scene off the desktop |
+| **Desktop layout** | Single monitor, span all, or duplicate on every monitor |
 | **Reload scene** | Pick up changes to `config.json` |
 | **Open scene folder** | Jump to `dist\web\` |
 | **Open DevTools** | Requires `--devtools` on the command line |
 | **Open log** | `%LOCALAPPDATA%\Backdrop\backdrop.log` |
-| **Quit Backdrop** | |
+| **Copy diagnostics** | The `--diagnose` report, on the clipboard |
+| **Quit Backdrop** | Exit cleanly |
+| **Kill Backdrop** | Last resort if a shutdown hangs |
 
 Double-clicking the tray icon toggles window and desktop mode.
+
+Win+`]` and Win+`[` change scene and Win+`P` shuffles the palette. The chords need Win once the scene is on the desktop, because the wallpaper never holds focus.
 
 ---
 
 ## Step 6 — Multiple monitors
 
+With two or more displays the default is **duplicate** — one scene per monitor at its native resolution. A tray pick under **Desktop layout** is remembered for next launch, and a flag beats both:
+
 ```powershell
+.\dist\Backdrop.exe --duplicate-all   # one copy per monitor (the dual-screen default)
 .\dist\Backdrop.exe --span-all        # one continuous scene across everything
-.\dist\Backdrop.exe --monitor 1       # second monitor from the left only
+.\dist\Backdrop.exe --monitor 1       # second monitor from the left only (0-based)
 ```
 
 ---
@@ -119,6 +146,14 @@ Drops a shortcut in your Startup folder. No admin, no registry, no scheduled tas
 
 ---
 
+## Step 8 — Make it yours
+
+`Ctrl+Alt+B` opens a floating console with sliders and colour pickers for the whole scene. Changes preview live; **SAVE** writes them to `config.json` and **RESET** goes back to the last save.
+
+To hand-edit instead, change `dist\web\config.json` and use **Reload scene** from the tray — or change `src\Backdrop\web\config.json` so the edit survives the next build. Every key is listed on the [Configure]({% link docs/pages/configure.md %}) page.
+
+---
+
 ## Troubleshooting
 
 **Nothing happens when I run it.**
@@ -128,7 +163,7 @@ Check `%LOCALAPPDATA%\Backdrop\backdrop.log` — it records every startup, wheth
 It is in the notification area. Expand the overflow arrow.
 
 **It is running but I see nothing.**
-Desktop mode retries silently. Check the log for `Attached to WorkerW`. If you only see `Still not attached after N attempts`, run `--diagnose` and share the output.
+Desktop mode retries silently. Check the log for `Attached to WorkerW` — or `Attached to Progman`, which is the normal fallback on machines where no WorkerW appears. If you only see `Still not attached after N attempts`, run `--diagnose` and share the output.
 
 **The scene shows in a window but not on the desktop, or it covers my icons.**
 
@@ -136,7 +171,7 @@ Desktop mode retries silently. Check the log for `Attached to WorkerW`. If you o
 .\dist\Backdrop.exe --diagnose
 ```
 
-The two common causes: another wallpaper tool (Wallpaper Engine, Lively, Rainmeter) already holds the layer, or `Chosen layer: None` meaning Explorer is not running normally.
+The report is also on **Copy diagnostics** in the tray menu. The two common causes: another wallpaper tool (Wallpaper Engine, Lively, Rainmeter) already holds the layer, or `Chosen layer : None`, meaning Explorer is not running normally.
 
 **The wallpaper goes black after changing resolution or unplugging a monitor.**
 Backdrop re-attaches within about four seconds. If not, use **Reload scene** from the tray.
