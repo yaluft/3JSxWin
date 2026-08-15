@@ -1,15 +1,26 @@
+# Build
 bin/
 obj/
 dist/
+dist.new/
 *.user
 *.suo
+*.userprefs
 .vs/
+.idea/
 
-# Config backups written by the console SAVE
-web/**/config.json.bak
+# Agent / editor scratch
+.superpowers/
+.claude/
+.grok/
+copilot.vim/
+docs/superpowers/
+
+# Config backups from the live console
 *.bak
+web/**/config.json.bak
 
-# Cloudflare Worker
+# Node / Cloudflare Worker
 node_modules/
 .wrangler/
 site/node_modules/
@@ -17,3 +28,17 @@ site/.wrangler/
 site/.wrangler-out/
 site/worker-configuration.d.ts
 site/public/download/*.zip
+
+# OS
+Thumbs.db
+Desktop.ini
+.DS_Store
+*~
+
+# Machine-local runtime (not the repo)
+*.log
+**/WebView2/
+
+# Personal captures / not the project
+Recording*.mp4
+"Recording *.mp4"

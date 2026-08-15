@@ -41,14 +41,16 @@ Inside `web/js/`, the frequently-edited files are:
 
 | File | What is in it |
 | --- | --- |
-| `main.js` | Boot, the render loop, the adaptive quality ladder, scene switching. |
-| `scenes.js` | Every fragment shader, and the `FRAGMENTS` map that names them. |
-| `scenes-meta.js` | Scene ids, labels, and blurbs — the list the toast and console read. |
+| `main.js` | Boot, the render loop, the adaptive quality ladder, scene switching, per-scene tuning. |
+| `scenes.js` | The core fragment shaders, and the `FRAGMENTS` map that names them. |
+| `scenes-meta.js` | Core scene ids, labels, and blurbs, plus the active-list helpers the catalog calls. |
+| `theme-catalog.js` | The optional `web/themes/` library: what is installed, and lazy-loading a theme's shader on first show. |
+| `shader-lib.js` | GLSL shared between core scenes and themes. |
 | `sky.js` | The aurora scene proper: curtains, stars, horizon, reflection. |
 | `ascii.js` | The glyph atlas and the shared ASCII pass. |
 | `audio.js` | Generated soundscapes. Oscillators and filtered noise, no audio files. |
 | `palettes.js` | The twelve Neovim palettes. |
-| `panel.js` | The `Ctrl+Alt+B` console: control list, layout, save/reset. |
+| `panel.js` | The `Ctrl+Alt+B` console: control list, layout, theme install toggles, save/reset. |
 
 ES module imports carry a `?v=` query — bump it when you change a file, or WebView2 will serve the cached copy.
 

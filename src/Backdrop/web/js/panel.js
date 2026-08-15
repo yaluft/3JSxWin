@@ -8,7 +8,13 @@
 // console window (forward every change to the host, which relays to the scene).
 
 import { PALETTES } from './palettes.js';
-import { SCENE_IDS, SCENE_META } from './scenes-meta.js';
+import { CORE_IDS, SCENE_IDS, SCENE_META } from './scenes-meta.js';
+import { getCatalog } from './theme-catalog.js';
+
+const HOST_ACTIONS = [
+  'window', 'layout-single', 'layout-span', 'layout-duplicate',
+  'reload', 'folder', 'devtools', 'log', 'diagnose', 'quit', 'kill',
+];
 
 const CONTROLS = [
   { section: 'scene' },
@@ -18,7 +24,7 @@ const CONTROLS = [
   },
   {
     group: 'root', key: 'paletteName', label: 'palette', type: 'select',
-    options: ['boreal', ...PALETTES.map((p) => p.id)],
+    options: ['boreal', 'custom', ...PALETTES.map((p) => p.id)],
   },
 
   { section: 'aurora' },
@@ -48,11 +54,6 @@ const CONTROLS = [
   { group: 'ascii.terrascii', key: 'minCols', label: 'min chars', min: 16, max: 320, step: 2 },
   { group: 'ascii.terrascii', key: 'maxCols', label: 'max chars', min: 16, max: 640, step: 2 },
 
-  { section: 'ascii: tubes' },
-  { group: 'ascii.hexascii', key: 'cellPx', label: 'char size', min: 4, max: 28, step: 0.5 },
-  { group: 'ascii.hexascii', key: 'minCols', label: 'min chars', min: 16, max: 320, step: 2 },
-  { group: 'ascii.hexascii', key: 'maxCols', label: 'max chars', min: 16, max: 640, step: 2 },
-
   { section: 'ascii: warp' },
   { group: 'ascii.warpscii', key: 'cellPx', label: 'char size', min: 4, max: 28, step: 0.5 },
   { group: 'ascii.warpscii', key: 'minCols', label: 'min chars', min: 16, max: 320, step: 2 },
@@ -76,10 +77,24 @@ const CONTROLS = [
     group: 'hud', key: 'corner', label: 'corner', type: 'select', reload: true,
     options: ['top-left', 'top-right', 'bottom-left', 'bottom-right'],
   },
+
+  { section: 'audio' },
+  { group: 'audio', key: 'enabled', label: 'sound', type: 'toggle' },
+  { group: 'audio', key: 'volume', label: 'volume', min: 0, max: 1, step: 0.01 },
+
+  { section: 'this theme' },
+  { group: 'tune', key: 'intensity', label: 'intensity', min: 0, max: 2, step: 0.01 },
+  { group: 'tune', key: 'speed', label: 'speed', min: 0, max: 0.3, step: 0.001 },
+  { group: 'tune', key: 'height', label: 'height', min: 0.05, max: 1.2, step: 0.01 },
+  { group: 'tune', key: 'volume', label: 'volume', min: 0, max: 1, step: 0.01 },
+
+  { section: 'host' },
+  { type: 'actions', buttons: HOST_ACTIONS },
 ];
 
 export function createPanel(config, { onChange, onCommand } = {}) {
   const draft = structuredClone(config);
+  draft.installed = [...(draft.installed ?? [])];
   let dirty = false;
   let needsReload = false;
 
@@ -118,7 +133,37 @@ export function createPanel(config, { onChange, onCommand } = {}) {
     body.appendChild(buildRow(c));
   }
 
+  const libHead = document.createElement('div');
+  libHead.className = 'console__group';
+  libHead.textContent = '> library';
+  body.appendChild(libHead);
+  for (const theme of getCatalog()) {
+    body.appendChild(buildRow({
+      group: 'installed', key: theme.id, label: theme.label ?? theme.id, type: 'toggle',
+    }));
+  }
+  const sceneSel = root.querySelector('select[data-key="scene"]');
+  if (sceneSel) syncSceneOptions(sceneSel, draft);
+
   function buildRow(c) {
+    if (c.type === 'actions') {
+      const wrap = document.createElement('div');
+      wrap.className = 'console__actions';
+      wrap.style.flexWrap = 'wrap';
+      wrap.style.gap = '4px';
+      wrap.style.padding = '4px 0 8px';
+      for (const id of c.buttons) {
+        const btn = el('button', { type: 'button', class: 'console__btn', 'data-host': id });
+        btn.textContent = id;
+        btn.style.padding = '2px 6px';
+        btn.style.fontSize = '10px';
+        btn.style.letterSpacing = '0.04em';
+        btn.addEventListener('click', () => onCommand?.('host', { action: id }));
+        wrap.appendChild(btn);
+      }
+      return wrap;
+    }
+
     const row = document.createElement('label');
     row.className = 'console__row' + (c.reload ? ' console__row--reload' : '');
 
@@ -127,7 +172,7 @@ export function createPanel(config, { onChange, onCommand } = {}) {
     name.textContent = c.label;
     row.appendChild(name);
 
-    const current = c.group === 'root' ? draft[c.key] : getGroup(draft, c.group)?.[c.key];
+    const current = readValue(draft, c);
 
     if (c.type === 'color') {
       const input = el('input', { type: 'color', value: current ?? '#ffffff' });
@@ -141,9 +186,10 @@ export function createPanel(config, { onChange, onCommand } = {}) {
       row.appendChild(input);
     } else if (c.type === 'select') {
       const sel = document.createElement('select');
+      if (c.key) sel.dataset.key = c.key;
       for (const opt of c.options) {
         const o = el('option', { value: opt });
-        o.textContent = SCENE_META[opt]?.label ?? PALETTES.find((p) => p.id === opt)?.label ?? opt;
+        o.textContent = optionLabel(opt);
         if (opt === current) o.selected = true;
         sel.appendChild(o);
       }
@@ -172,15 +218,32 @@ export function createPanel(config, { onChange, onCommand } = {}) {
   }
 
   function set(c, value) {
-    if (c.group === 'root') draft[c.key] = value;
-    else ensureGroup(draft, c.group)[c.key] = value;
+    writeValue(draft, c, value);
     dirty = true;
     if (c.reload) needsReload = true;
+    if (c.group === 'palette') {
+      draft.paletteName = 'custom';
+      draft.customPalette = { ...draft.palette };
+      const sel = root.querySelector('select[data-key="paletteName"]');
+      if (sel) sel.value = 'custom';
+    }
+    if (c.group === 'installed') {
+      const sel = root.querySelector('select[data-key="scene"]');
+      if (sel) syncSceneOptions(sel, draft);
+      if (!draft.installed.includes(draft.scene) && !CORE_IDS.includes(draft.scene)) {
+        draft.scene = 'aurora';
+        if (sel) sel.value = 'aurora';
+      }
+    }
     if (c.key === 'paletteName') {
-      const named = PALETTES.find((p) => p.id === value);
-      if (named) {
-        draft.palette = { ...draft.palette, ...named.palette };
-        if (draft.motes) draft.motes.color = named.palette.frost;
+      if (value === 'custom') {
+        if (draft.customPalette) draft.palette = { ...draft.palette, ...draft.customPalette };
+      } else {
+        const named = PALETTES.find((p) => p.id === value);
+        if (named) {
+          draft.palette = { ...draft.palette, ...named.palette };
+          if (draft.motes) draft.motes.color = named.palette.frost;
+        }
       }
     }
     setStat('* unsaved');
@@ -249,6 +312,51 @@ function getGroup(draft, path) {
 /** Same dotted path, but creates any missing intermediate objects along the way. */
 function ensureGroup(draft, path) {
   return path.split('.').reduce((node, key) => (node[key] ??= {}), draft);
+}
+
+function tuneGroup(draft) {
+  return draft.scenes?.[draft.scene];
+}
+
+function ensureTuneGroup(draft) {
+  (draft.scenes ??= {})[draft.scene] ??= {};
+  return draft.scenes[draft.scene];
+}
+
+function readValue(draft, c) {
+  if (c.group === 'root') return draft[c.key];
+  if (c.group === 'tune') return tuneGroup(draft)?.[c.key];
+  if (c.group === 'installed') return (draft.installed ?? []).includes(c.key);
+  return getGroup(draft, c.group)?.[c.key];
+}
+
+function writeValue(draft, c, value) {
+  if (c.group === 'root') draft[c.key] = value;
+  else if (c.group === 'tune') ensureTuneGroup(draft)[c.key] = value;
+  else if (c.group === 'installed') {
+    const set = new Set(draft.installed ?? []);
+    if (value) set.add(c.key);
+    else set.delete(c.key);
+    draft.installed = [...set];
+  } else ensureGroup(draft, c.group)[c.key] = value;
+}
+
+function syncSceneOptions(sel, draft) {
+  const allow = new Set(getCatalog().map((t) => t.id));
+  const ids = [...CORE_IDS, ...(draft.installed ?? []).filter((id) => allow.has(id))];
+  const current = draft.scene;
+  sel.replaceChildren();
+  for (const opt of ids) {
+    const o = el('option', { value: opt });
+    o.textContent = optionLabel(opt);
+    if (opt === current) o.selected = true;
+    sel.appendChild(o);
+  }
+}
+
+function optionLabel(opt) {
+  if (opt === 'custom') return 'Custom';
+  return SCENE_META[opt]?.label ?? PALETTES.find((p) => p.id === opt)?.label ?? opt;
 }
 
 function el(tag, attrs) {

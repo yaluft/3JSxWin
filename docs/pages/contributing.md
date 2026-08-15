@@ -49,7 +49,7 @@ If you do get stuck with an invisible backdrop: the tray icon is still there, an
 | CLI | `src/Backdrop/Startup/CommandLineOptions.cs` | Flags and the `Usage` text. Keep the two in step. |
 | Site | `site/` | The Cloudflare Worker behind yakupov.xyz. `site/sync-scene.ps1` copies the scene into it. |
 
-Inside `web/js/`: `main.js` is the render loop and quality ladder, `scenes.js` holds every fragment shader, `scenes-meta.js` the scene ids and labels, `sky.js` the aurora itself, `ascii.js` the glyph pass, `audio.js` the generated soundscapes, `palettes.js` the Neovim themes, and `panel.js` the `Ctrl+Alt+B` console.
+Inside `web/js/`: `main.js` is the render loop and quality ladder, `scenes.js` holds the core fragment shaders, `scenes-meta.js` the core scene ids and labels, `theme-catalog.js` the optional `web/themes/` library and its lazy shader loading, `shader-lib.js` the GLSL they share, `sky.js` the aurora itself, `ascii.js` the glyph pass, `audio.js` the generated soundscapes, `palettes.js` the Neovim themes, and `panel.js` the `Ctrl+Alt+B` console.
 
 `Interop/NativeMethods.cs` is deliberately dumb: raw P/Invoke, no logic. Keep it that way — it makes the interop layer auditable at a glance.
 

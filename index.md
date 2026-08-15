@@ -16,7 +16,7 @@ A live [three.js](https://threejs.org) scene as a Windows 11 wallpaper. It sits 
 
 ## What it does
 
-- Sixteen scenes: aurora, ASCII tube fields, a moving Great Wave, and five nature scenes that generate their own soundscapes
+- Nine core scenes — aurora, ASCII tube fields, and nature scenes that generate their own soundscapes — plus an optional theme library you install from the console
 - Renders straight onto the `WorkerW` desktop layer, so icons stay clickable and the taskbar stays on top
 - Duplicates across monitors at native resolution by default, or spans all of them as one canvas
 - Windowed preview mode so you can test before committing to the desktop

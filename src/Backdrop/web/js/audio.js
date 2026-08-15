@@ -37,7 +37,7 @@ function fillNoise(data, kind) {
 
 export function createLowVibe(volume = LEVEL, sceneId = 'aurora') {
   const AudioCtx = globalThis.AudioContext || globalThis.webkitAudioContext;
-  if (!AudioCtx) return { start() {}, stop() {}, dispose() {}, setScene() {} };
+  if (!AudioCtx) return { start() {}, stop() {}, dispose() {}, setScene() {}, setVolume() {}, setEnabled() {}, setThemeModule() {} };
 
   let ctx = null;
   let master = null;
@@ -45,7 +45,8 @@ export function createLowVibe(volume = LEVEL, sceneId = 'aurora') {
   let nodes = [];
   let cancels = [];
   let playing = false;
-  const target = Math.min(Math.max(volume, 0), 1);
+  let target = Math.min(Math.max(volume, 0), 1);
+  let themeMod = null;
 
   function track(node) {
     nodes.push(node);
@@ -140,45 +141,6 @@ export function createLowVibe(volume = LEVEL, sceneId = 'aurora') {
     startTracked();
   }
 
-  function buildPetrichor() {
-    const earth = noise('brown');
-    const earthLp = filter('lowpass', 320, 0.6);
-    const earthGain = gain(0.22);
-    earth.connect(earthLp);
-    earthLp.connect(earthGain);
-    earthGain.connect(master);
-
-    const rain = noise('white');
-    const rainHp = filter('highpass', 1400, 0.6);
-    const rainLp = filter('lowpass', 7800, 0.5);
-    const rainGain = gain(0.16);
-    rain.connect(rainHp);
-    rainHp.connect(rainLp);
-    rainLp.connect(rainGain);
-    rainGain.connect(master);
-    lfo(0.11, 0.04, rainGain.gain);
-
-    const rumble = noise('brown');
-    const rumbleLp = filter('lowpass', 90, 0.8);
-    const boom = osc('sine', 34);
-    const thunder = gain(0.0001);
-    rumble.connect(rumbleLp);
-    rumbleLp.connect(thunder);
-    boom.connect(thunder);
-    thunder.connect(master);
-
-    startTracked();
-
-    everyRandom(10000, 24000, () => {
-      if (!ctx || !playing) return;
-      const now = ctx.currentTime;
-      thunder.gain.cancelScheduledValues(now);
-      thunder.gain.setValueAtTime(0.0001, now);
-      thunder.gain.exponentialRampToValueAtTime(0.42, now + 0.35);
-      thunder.gain.exponentialRampToValueAtTime(0.0001, now + 3.4);
-    });
-  }
-
   function buildKelp() {
     const a = osc('sine', 36.7);
     const b = osc('sine', 48.9);
@@ -249,103 +211,96 @@ export function createLowVibe(volume = LEVEL, sceneId = 'aurora') {
     startTracked();
   }
 
-  function buildCicada() {
-    const chorus = (freq, rate, q, level) => {
-      const src = noise('white');
-      const bp = filter('bandpass', freq, q);
-      const g = gain(0.0001);
-      src.connect(bp);
-      bp.connect(g);
-      g.connect(master);
-      const gate = osc('sine', rate);
-      const depth = gain(level * 0.5);
-      gate.connect(depth);
-      depth.connect(g.gain);
-      g.gain.value = level * 0.5;
-    };
-    chorus(3250, 5.8, 8.5, 0.11);
-    chorus(4120, 4.85, 6.2, 0.07);
+  function buildEmber() {
+    const hiss = noise('pink');
+    const hp = filter('highpass', 900, 0.7);
+    const bp = filter('bandpass', 1800, 0.8);
+    const g = gain(0.12);
+    hiss.connect(hp);
+    hp.connect(bp);
+    bp.connect(g);
+    g.connect(master);
+    lfo(0.21, 0.04, g.gain);
 
-    const air = noise('white');
-    const airHp = filter('highpass', 6200, 0.5);
-    const airGain = gain(0.035);
-    air.connect(airHp);
-    airHp.connect(airGain);
-    airGain.connect(master);
-
-    const ground = osc('sine', 49);
-    const groundGain = gain(0.045);
-    ground.connect(groundGain);
-    groundGain.connect(master);
-
-    startTracked();
-  }
-
-  function buildRime() {
-    const wind = noise('pink');
-    const windHp = filter('highpass', 720, 0.6);
-    const windLp = filter('lowpass', 2800, 0.5);
-    const windGain = gain(0.11);
-    wind.connect(windHp);
-    windHp.connect(windLp);
-    windLp.connect(windGain);
-    windGain.connect(master);
-    lfo(0.08, 0.03, windGain.gain);
-
-    const bed = osc('sine', 41);
-    const bedGain = gain(0.055);
-    bed.connect(bedGain);
-    bedGain.connect(master);
-
+    const bed = osc('sine', 46);
+    const bedG = gain(0.05);
+    bed.connect(bedG);
+    bedG.connect(master);
     startTracked();
 
-    everyRandom(700, 3200, () => {
+    everyRandom(180, 900, () => {
       if (!ctx || !playing) return;
       const now = ctx.currentTime;
       const src = ctx.createBufferSource();
-      const buf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * 0.04), ctx.sampleRate);
+      const buf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * 0.05), ctx.sampleRate);
       fillNoise(buf.getChannelData(0), 'white');
       src.buffer = buf;
-      const hp = ctx.createBiquadFilter();
-      hp.type = 'highpass';
-      hp.frequency.value = 4800;
-      const g = ctx.createGain();
-      g.gain.setValueAtTime(0.07, now);
-      g.gain.exponentialRampToValueAtTime(0.0001, now + 0.045);
-      src.connect(hp);
-      hp.connect(g);
-      g.connect(master);
+      const f = ctx.createBiquadFilter();
+      f.type = 'bandpass';
+      f.frequency.value = 1200 + Math.random() * 2400;
+      f.Q.value = 2.2;
+      const gg = ctx.createGain();
+      gg.gain.setValueAtTime(0.08, now);
+      gg.gain.exponentialRampToValueAtTime(0.0001, now + 0.08);
+      src.connect(f);
+      f.connect(gg);
+      gg.connect(master);
       src.start(now);
-      src.stop(now + 0.06);
-      src.onended = () => {
-        try { src.disconnect(); hp.disconnect(); g.disconnect(); } catch { /* */ }
-      };
+      src.stop(now + 0.1);
     });
+  }
 
-    everyRandom(2200, 7000, () => {
-      if (!ctx || !playing) return;
-      const now = ctx.currentTime;
-      const o = ctx.createOscillator();
-      const g = ctx.createGain();
-      o.type = 'sine';
-      o.frequency.value = 1500 + Math.random() * 1400;
-      g.gain.setValueAtTime(0.05, now);
-      g.gain.exponentialRampToValueAtTime(0.0001, now + 0.35);
-      o.connect(g);
-      g.connect(master);
-      o.start(now);
-      o.stop(now + 0.4);
-      o.onended = () => { try { o.disconnect(); g.disconnect(); } catch { /* */ } };
-    });
+  function buildIon() {
+    const a = osc('sine', 73.4);
+    const b = osc('sine', 110.1);
+    const g = gain(0.09);
+    a.connect(g);
+    b.connect(g);
+    g.connect(master);
+    lfo(0.11, 8, a.frequency);
+
+    const hiss = noise('white');
+    const bp = filter('bandpass', 2400, 4);
+    const hg = gain(0.04);
+    hiss.connect(bp);
+    bp.connect(hg);
+    hg.connect(master);
+    startTracked();
+  }
+
+  function buildStarwell() {
+    const a = osc('sawtooth', 55);
+    const lp = filter('lowpass', 240, 0.8);
+    const g = gain(0.06);
+    a.connect(lp);
+    lp.connect(g);
+    g.connect(master);
+    lfo(0.04, 18, a.frequency);
+
+    const wash = noise('brown');
+    const wlp = filter('lowpass', 160, 0.6);
+    const wg = gain(0.18);
+    wash.connect(wlp);
+    wlp.connect(wg);
+    wg.connect(master);
+    startTracked();
+  }
+
+  function themeApi() {
+    return { ctx, master, osc, noise, filter, gain, lfo, startTracked, everyRandom };
   }
 
   function buildFor(id) {
     clearGraph();
-    if (id === 'petrichor') buildPetrichor();
-    else if (id === 'kelp') buildKelp();
+    if (themeMod?.buildAudio) {
+      themeMod.buildAudio(themeApi());
+      return;
+    }
+    if (id === 'kelp') buildKelp();
     else if (id === 'murmur') buildMurmur();
-    else if (id === 'cicada') buildCicada();
-    else if (id === 'rime') buildRime();
+    else if (id === 'ember') buildEmber();
+    else if (id === 'ion') buildIon();
+    else if (id === 'starwell' || id === 'warpscii') buildStarwell();
     else buildDrone();
   }
 
@@ -379,9 +334,12 @@ export function createLowVibe(volume = LEVEL, sceneId = 'aurora') {
       master.gain.linearRampToValueAtTime(0, now + 0.5);
       playing = false;
     },
+    setThemeModule(mod) {
+      themeMod = mod ?? null;
+    },
     setScene(id) {
       const next = id || 'aurora';
-      if (next === current) return;
+      if (next === current && !themeMod) return;
       current = next;
       if (!ctx || !master) return;
       const now = ctx.currentTime;
@@ -389,6 +347,18 @@ export function createLowVibe(volume = LEVEL, sceneId = 'aurora') {
       master.gain.setValueAtTime(0, now);
       buildFor(current);
       if (playing) master.gain.linearRampToValueAtTime(target, now + 0.7);
+    },
+    setVolume(v) {
+      target = Math.min(Math.max(v, 0), 1);
+      if (playing && master) {
+        const now = ctx.currentTime;
+        master.gain.cancelScheduledValues(now);
+        master.gain.setValueAtTime(master.gain.value, now);
+        master.gain.linearRampToValueAtTime(target, now + 0.2);
+      }
+    },
+    setEnabled(on) {
+      if (!on) this.stop();
     },
     dispose() {
       for (const cancel of cancels) cancel();

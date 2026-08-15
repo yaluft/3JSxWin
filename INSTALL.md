@@ -4,6 +4,8 @@ Two ways in. If you just want the wallpaper running, take the one-liner below. I
 want to change the code, build from source — that is the rest of this page, roughly ten
 minutes with most of it waiting on the SDK download.
 
+Store listing (not implemented in this tree): [docs/publish-ms-store.md](docs/publish-ms-store.md).
+
 ## The short way
 
 ```powershell
@@ -76,7 +78,7 @@ end at `dist\Backdrop.exe`.
 
 A 1280×720 window opens with the aurora in it. This tells you the shader compiled and
 your GPU is fine, before anything touches your desktop. Press `]` and `[` to walk
-through the other fifteen scenes and `P` to shuffle the palette. Close it when
+through the other eight core scenes and `P` to shuffle the palette. Close it when
 satisfied.
 
 ## 5. Put it on the desktop

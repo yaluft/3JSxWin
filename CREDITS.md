@@ -37,8 +37,8 @@ Co-Authored-By: Claude <noreply@anthropic.com>
   - [webgl_buffergeometry_custom_attributes_particles](https://threejs.org/examples/#webgl_buffergeometry_custom_attributes_particles) — per-particle size/phase attributes
   - The complete gallery: <https://threejs.org/examples/>
 - **[anime.js](https://animejs.com/)** ([juliangarnier/anime](https://github.com/juliangarnier/anime))
-  v3.2.2 — MIT, © Julian Garnier. Vendored alongside three.js and used by the one 2D
-  scene, Pulse.
+  v3.2.2 — MIT, © Julian Garnier. Still vendored in `web/vendor/`, but nothing imports
+  it since the Pulse scene was removed; credited while the file ships.
 - **[Microsoft.Web.WebView2](https://learn.microsoft.com/microsoft-edge/webview2/)** —
   the Chromium host. Pulled from NuGet at build time.
 
@@ -70,10 +70,7 @@ Engine, [Lively Wallpaper](https://github.com/rocksdanister/lively), and a long 
 blog posts arrived at the same `0x052C` message independently. Backdrop's contribution
 is documenting *why* each step is needed, in `Interop/DesktopLayer.cs`.
 
-The hex ASCII scene takes its look from
+The density-ASCII scenes take their look from
 [DeoVolenteGames' ascii-renderer](https://deovolentegames.github.io/ascii-renderer/)
-([@DeoVolenteGames](https://github.com/DeoVolenteGames)) — the density ramp and the
-tinted-ink treatment, reimplemented here as a shader pass.
-
-The Kanagawa scene is after Hokusai's *The Great Wave off Kanagawa* (c. 1831, public
-domain).
+([@DeoVolenteGames](https://github.com/DeoVolenteGames)) — the glyph density ramp and
+the tinted-ink treatment, reimplemented here as a shader pass.

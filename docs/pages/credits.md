@@ -29,7 +29,7 @@ Commits made in collaboration carry a `Co-Authored-By: Claude <noreply@anthropic
   - [`webgl_shaders_ocean`](https://threejs.org/examples/#webgl_shaders_ocean) — full-screen shader surface
   - [`webgl_points_sprites`](https://threejs.org/examples/#webgl_points_sprites) — GPU-animated point field
   - [`webgl_buffergeometry_custom_attributes_particles`](https://threejs.org/examples/#webgl_buffergeometry_custom_attributes_particles) — per-particle attributes
-- **[anime.js](https://animejs.com/)** — v3.2.2, MIT, © Julian Garnier. Vendored too, and used by the one 2D scene, Pulse.
+- **[anime.js](https://animejs.com/)** — v3.2.2, MIT, © Julian Garnier. Still vendored, but nothing imports it since the Pulse scene was removed; credited while the file ships.
 - **[Microsoft.Web.WebView2](https://learn.microsoft.com/microsoft-edge/webview2/)** — Chromium host, pulled from NuGet at build time.
 
 ---
@@ -59,6 +59,4 @@ The thirteenth, Boreal, is the project's own default.
 
 The `WorkerW` re-parenting technique is folklore that predates this project. [Wallpaper Engine](https://www.wallpaperengine.io/), [Lively Wallpaper](https://github.com/rocksdanister/lively), and many blog posts arrived at the same `0x052C` message independently. Backdrop's contribution is documenting *why* each step is needed, in `Interop/DesktopLayer.cs`.
 
-The hex ASCII scene takes its look from [DeoVolenteGames' ascii-renderer](https://deovolentegames.github.io/ascii-renderer/) ([@DeoVolenteGames](https://github.com/DeoVolenteGames)) — the density ramp and tinted-ink treatment, reimplemented here as a shader pass.
-
-The Kanagawa scene is after Hokusai's *The Great Wave off Kanagawa* (c. 1831, public domain).
+The density-ASCII scenes take their look from [DeoVolenteGames' ascii-renderer](https://deovolentegames.github.io/ascii-renderer/) ([@DeoVolenteGames](https://github.com/DeoVolenteGames)) — the glyph density ramp and tinted-ink treatment, reimplemented here as a shader pass.

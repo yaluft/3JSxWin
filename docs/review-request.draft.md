@@ -14,17 +14,17 @@ is how three.js projects normally get eyes and feedback. Pick one, paste, edit t
 
 ## Showcase post (suggested)
 
-**Title:** 3JSxWin — sixteen three.js scenes living behind the Windows 11 desktop icons
+**Title:** 3JSxWin — three.js scenes living behind the Windows 11 desktop icons
 
 Hi all,
 
 I built a small Windows 11 app that renders live three.js scenes as the desktop
-wallpaper — behind the icons, on the real `WorkerW` layer, via a WebView2 host. There are
-sixteen of them: a full-screen aurora shader with a GPU-animated points field, four
-density-ASCII tube scenes, a moving Great Wave, and five nature scenes that generate their
-own soundscapes from oscillators and filtered noise. It duplicates across monitors at
-native resolution or spans them as one canvas, and has an on-scene console for tuning the
-look live.
+wallpaper — behind the icons, on the real `WorkerW` layer, via a WebView2 host. Nine
+scenes ship loaded: a full-screen aurora shader with a GPU-animated points field, three
+density-ASCII tube scenes, and nature scenes that generate their own soundscapes from
+oscillators and filtered noise. A larger optional library loads on demand. It duplicates
+across monitors at native resolution or spans them as one canvas, and has an on-scene
+console for tuning the look live.
 
 - Repo: <https://github.com/yaluft/3JSxWin>
 - Live in the browser: <https://yakupov.xyz/scene>

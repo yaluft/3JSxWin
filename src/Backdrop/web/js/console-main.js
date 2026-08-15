@@ -8,11 +8,14 @@
 import { loadConfig } from './config.js';
 import { createPanel } from './panel.js';
 import { tellHost, reportError } from './host.js';
+import { loadCatalog, setInstalled } from './theme-catalog.js';
 
 boot().catch((error) => reportError('console-boot', error));
 
 async function boot() {
   const config = await loadConfig();
+  await loadCatalog();
+  setInstalled(config.installed);
 
   const panel = createPanel(config, {
     onChange(draft) {
@@ -24,6 +27,7 @@ async function boot() {
       else if (name === 'reset') tellHost({ type: 'resetcfg' });
       else if (name === 'shuffle') tellHost({ type: 'shuffle' });
       else if (name === 'close') tellHost({ type: 'close' });
+      else if (name === 'host') tellHost({ type: 'host', action: payload.action });
     },
   });
 

@@ -55,17 +55,31 @@ public partial class App : Application
         // WebView2 environment is created.
         Environment.SetEnvironmentVariable("WEBVIEW2_DEFAULT_BACKGROUND_COLOR", "FF04060C");
 
+        // A previous instance (or tray Kill) can leave msedgewebview2 holding
+        // Chrome_WidgetWin_0. Reap it before we create another environment.
+        WebViewLifetime.ReapPrevious();
+
         DispatcherUnhandledException += OnDispatcherException;
         AppDomain.CurrentDomain.UnhandledException += (_, args) =>
             Log.Write("Fatal", args.ExceptionObject as Exception ?? new Exception("unknown"));
 
         Log.Write($"--- start (windowed={options.Windowed}, monitor={options.MonitorIndex}) ---");
 
-        _host = new SceneHost(options);
-        await _host.StartAsync();
-
-        _tray = new TrayMenu(_host);
-        _tray.Install();
+        try
+        {
+            _host = new SceneHost(options);
+            await _host.StartAsync();
+            _tray = new TrayMenu(_host);
+            _tray.Install();
+        }
+        catch (Exception ex)
+        {
+            Log.Write("Startup failed", ex);
+            MessageBox.Show(
+                $"Backdrop could not start.\n\n{ex.Message}\n\nSee {Log.File}",
+                "Backdrop", MessageBoxButton.OK, MessageBoxImage.Error);
+            Shutdown();
+        }
     }
 
     private void OnDispatcherException(object sender, DispatcherUnhandledExceptionEventArgs e)
@@ -78,7 +92,8 @@ public partial class App : Application
     {
         _tray?.Dispose();
         _host?.Dispose();
-        _instance?.Dispose();
+        // Leave the mutex held until process death so a relaunch cannot start
+        // while Chromium is still tearing down Chrome_WidgetWin_0.
         Log.Write("--- exit ---");
         base.OnExit(e);
     }

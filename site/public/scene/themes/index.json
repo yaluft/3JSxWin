@@ -1,0 +1,20 @@
+{
+  "themes": [
+    { "id": "mycelight", "label": "Mycelight", "blurb": "Hyphae as circuit traces; frost-light packets hop node to node", "family": "machine" },
+    { "id": "mothwork", "label": "Mothwork", "blurb": "A turbine of moth wings shedding iridescent scale dust", "family": "machine" },
+    { "id": "coralnet", "label": "Coralnet", "blurb": "Coral branches as PCB traces; data blooms at the tips", "family": "machine" },
+    { "id": "lungclock", "label": "Lungclock", "blurb": "A ribcage of bellows and valves that breathes light", "family": "hybrid" },
+    { "id": "inkatrium", "label": "Inkatrium", "blurb": "A city folded into a hanging droplet; streets follow the meniscus", "family": "interior" },
+    { "id": "foldwell", "label": "Foldwell", "blurb": "Rooms stacked inside rooms; doorways with the wrong gravity", "family": "interior" },
+    { "id": "sporehall", "label": "Sporehall", "blurb": "A nave whose ribs are pipes; spores are packets", "family": "hybrid" },
+    { "id": "orreryheart", "label": "Orreryheart", "blurb": "Heart chambers that are planetary gears around a beating core", "family": "hybrid" },
+    { "id": "threadloom", "label": "Threadloom", "blurb": "A room that is a loom weaving its own nerves", "family": "hybrid" },
+    { "id": "orbis", "label": "Orbis", "blurb": "A displaced world turning in vacuum — sky-to-ground scale, no mesh", "family": "world" },
+    { "id": "atoll", "label": "Atoll", "blurb": "Summer water, a lone island, a low sun and a thin rainbow", "family": "world" },
+    { "id": "ringfall", "label": "Ringfall", "blurb": "A ringed world — thin ice band, shadow on the globe", "family": "world" },
+    { "id": "nimbus", "label": "Nimbus", "blurb": "A world lost in slow cloud belts", "family": "world" },
+    { "id": "shoal", "label": "Shoal", "blurb": "Tropical shallows and sandbars under a hard noon sun", "family": "world" },
+    { "id": "caldera", "label": "Caldera", "blurb": "A volcanic isle — crater glow over dark water", "family": "world" },
+    { "id": "bayline", "label": "Bayline", "blurb": "Voxel Tokyo — 3D pixel towers, Rainbow Bridge, windows ticking", "family": "world" }
+  ]
+}

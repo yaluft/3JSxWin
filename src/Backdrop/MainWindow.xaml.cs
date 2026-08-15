@@ -25,6 +25,7 @@ public partial class MainWindow : Window
     private readonly DispatcherTimer _guard;
     private readonly DispatcherTimer _retry;
     private readonly CoreWebView2Environment? _sharedEnvironment;
+    private readonly CancellationTokenSource _lifetime = new();
     private RECT _bounds;
     private int _attempts;
 
@@ -32,6 +33,7 @@ public partial class MainWindow : Window
     private LayerResult _layer;
     private bool _attached;
     private bool _ready;
+    private bool _webReleased;
 
     internal bool IsWindowedMode { get; private set; }
 
@@ -79,7 +81,7 @@ public partial class MainWindow : Window
         _retry.Tick += (_, _) => AttachToDesktop();
 
         Loaded += OnLoaded;
-        Closed += OnClosed;
+        Closing += (_, _) => ReleaseWeb();
     }
 
     private static string ResolveWebRoot(string? overridePath)
@@ -137,7 +139,12 @@ public partial class MainWindow : Window
     {
         try
         {
-            await InitializeWebViewAsync();
+            await InitializeWebViewAsync(_lifetime.Token);
+            if (_lifetime.IsCancellationRequested) return;
+        }
+        catch (OperationCanceledException)
+        {
+            return;
         }
         catch (Exception ex)
         {
@@ -155,9 +162,10 @@ public partial class MainWindow : Window
 
     // ---------------------------------------------------------------- WebView2
 
-    private async Task InitializeWebViewAsync()
+    private async Task InitializeWebViewAsync(CancellationToken cancel)
     {
         await Web.EnsureCoreWebView2Async(_sharedEnvironment);
+        cancel.ThrowIfCancellationRequested();
 
         var core = Web.CoreWebView2;
         Web.DefaultBackgroundColor = System.Drawing.Color.FromArgb(255, 4, 6, 12);
@@ -187,6 +195,7 @@ public partial class MainWindow : Window
                 args.Cancel = true;
         };
 
+        cancel.ThrowIfCancellationRequested();
         core.Navigate($"https://{VirtualHost}/index.html{_options.ToQueryString()}");
         Log.Write($"Scene served from {_webRoot}");
     }
@@ -203,9 +212,21 @@ public partial class MainWindow : Window
                 case "ready":
                     _ready = true;
                     Log.Write("Scene ready");
+                    try
+                    {
+                        if (Web.CoreWebView2 is { } core)
+                            WebViewLifetime.Remember(core.BrowserProcessId);
+                    }
+                    catch (Exception ex)
+                    {
+                        Log.Write("Could not read WebView2 browser pid", ex);
+                    }
                     break;
                 case "error":
                     Log.Write($"Scene error: {doc.RootElement.GetProperty("message").GetString()}");
+                    break;
+                case "announce":
+                    Log.Write($"Switch {doc.RootElement.GetProperty("scene").GetString()} · {doc.RootElement.GetProperty("palette").GetString()}");
                     break;
             }
         }
@@ -446,11 +467,27 @@ public partial class MainWindow : Window
         }
     }
 
-    private void OnClosed(object? sender, EventArgs e)
+    /// <summary>
+    /// Tear the Chromium HWND down before the WPF window dies. Closing two dual-monitor
+    /// WebViews at once otherwise races Chromium's class unregister (Win32 1412).
+    /// </summary>
+    internal void ReleaseWeb()
     {
+        if (_webReleased) return;
+        _webReleased = true;
+        try { _lifetime.Cancel(); } catch { /* already cancelled */ }
         _guard.Stop();
         _retry.Stop();
-        if (_attached) DesktopLayer.Detach(_hwnd);
-        Web?.Dispose();
+        try
+        {
+            if (_attached) DesktopLayer.Detach(_hwnd);
+            _attached = false;
+            Web?.CoreWebView2?.Stop();
+            Web?.Dispose();
+        }
+        catch (Exception ex)
+        {
+            Log.Write("WebView2 release", ex);
+        }
     }
 }

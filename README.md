@@ -29,10 +29,10 @@ The renderer is a vendored three.js scene (r185, offline). Tune it live with `Ct
 
 ## Features
 
-- Sixteen scenes: Aurora, Tube Dunes, ASCII Tubes, Starwell, Tube Warp, Ion, Kanagawa, Tube Loops, Ember, Bloom, Petrichor, Kelp, Murmur, Cicada, Rime, plus Pulse (anime.js)
-- Nature scenes carry their own generated soundscapes (rain, kelp, flock, cicada, frost)
+- Nine core scenes always loaded: Aurora, Tube Dunes, Starwell, Tube Warp, Ion, Tube Loops, Ember, Kelp, Murmur
+- Optional library under `web/themes/` (Mycelight, Mothwork, Coralnet, Lungclock, Inkatrium, Foldwell, Sporehall, Orreryheart, Threadloom) — files ship, shaders load only after you install them in the console
+- Generated soundscapes (no files); optional themes bring their own graph
 - ASCII scenes use a 32-glyph density ramp, palette-tinted ink, and a 480-column cap
-- Hex ASCII is inspired by [DeoVolenteGames' ascii-renderer](https://deovolentegames.github.io/ascii-renderer/) ([@DeoVolenteGames](https://github.com/DeoVolenteGames))
 - Palette randomizer over twelve real Neovim themes (Catppuccin Mocha, Tokyo Night, Rosé Pine, Kanagawa, Gruvbox, Nord, Everforest, Dracula, One Dark, Oxocarbon, Carbonfox, Solarized Osaka) plus the built-in Boreal
 - Dual-monitor default: one native-resolution copy per display (`--duplicate-all`)
 - `--window` preview before anything touches the desktop
@@ -133,7 +133,7 @@ The aurora is a full-screen shader quad; the motes are a GPU points field. Both 
 
 Desktop mode no longer falls back to a window. It retries silently. `Chosen layer : None` means Explorer is not running normally.
 
-Full walkthrough: [INSTALL.md](INSTALL.md). Config reference: [docs/pages/configure.md](docs/pages/configure.md).
+Full walkthrough: [INSTALL.md](INSTALL.md). Config reference: [docs/pages/configure.md](docs/pages/configure.md). Microsoft Store: [docs/publish-ms-store.md](docs/publish-ms-store.md).
 
 ## Site
 

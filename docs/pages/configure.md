@@ -45,19 +45,19 @@ Which scene loads at startup, by id.
 "scene": "aurora"
 ```
 
+Nine core scenes are always loaded:
+
 | id | Name | id | Name |
 | --- | --- | --- | --- |
-| `aurora` | Aurora | `bloom` | Bloom |
-| `terrascii` | Tube Dunes | `petrichor` | Petrichor |
-| `hexascii` | ASCII Tubes | `kelp` | Kelp |
-| `starwell` | Starwell | `murmur` | Murmur |
-| `warpscii` | Tube Warp | `cicada` | Cicada |
-| `ion` | Ion | `rime` | Rime |
-| `wave` | Kanagawa | `pulse` | Pulse |
-| `blobscii` | Tube Loops | | |
-| `ember` | Ember | | |
+| `aurora` | Aurora | `blobscii` | Tube Loops |
+| `terrascii` | Tube Dunes | `ember` | Ember |
+| `starwell` | Starwell | `kelp` | Kelp |
+| `warpscii` | Tube Warp | `murmur` | Murmur |
+| `ion` | Ion | | |
 
-Win+`]` and Win+`[` cycle through the list at runtime; the value here is only what loads first. (`--scene` on the command line is unrelated — it points the host at a different web folder.)
+The optional library under `web/themes/` adds more ids — its shaders load only once you install them from the console, and installed ids are recorded in `installed` below.
+
+Win+`]` and Win+`[` cycle through the active list at runtime; the value here is only what loads first. (`--scene` on the command line is unrelated — it points the host at a different web folder.)
 
 ## paletteName
 
@@ -70,6 +70,10 @@ The colour theme applied over `palette`. `boreal` is the built-in default; the o
 `boreal`, `catppuccin-mocha`, `tokyonight`, `rose-pine`, `kanagawa`, `gruvbox`, `nord`, `everforest`, `dracula`, `onedark`, `oxocarbon`, `carbonfox`, `solarized-osaka`.
 
 Win+`P` shuffles to a random one. Anything other than `boreal` overwrites the five `palette` colours below when the scene loads.
+
+## customPalette
+
+The same five keys as `palette`, held in their own slot. Set `paletteName` to `custom` and these colours are merged over `palette` at load (and `motes.color` follows `customPalette.frost`). The console writes this slot when you touch a colour picker, so hand-picked colours survive a palette shuffle.
 
 ## palette
 
@@ -135,7 +139,7 @@ The drifting particle field in front of the sky.
 ```
 
 {: .note }
-`motes.count` takes effect only after a scene reload, and the ASCII, Kanagawa, Pulse, and nature scenes never draw motes regardless of the value.
+`motes.count` takes effect only after a scene reload, and the ASCII and nature scenes never draw motes regardless of the value.
 
 ## finish
 
@@ -155,13 +159,35 @@ Per-scene grid settings for the four density-ASCII scenes. Column count follows 
 ```jsonc
 "ascii": {
   "terrascii": { "cellPx": 6, "minCols": 80, "maxCols": 480 },
-  "hexascii":  { "cellPx": 6, "minCols": 80, "maxCols": 480 },
   "warpscii":  { "cellPx": 6, "minCols": 80, "maxCols": 480 },
   "blobscii":  { "cellPx": 6, "minCols": 80, "maxCols": 480 }
 }
 ```
 
 Raising `cellPx` makes bigger glyphs and a coarser grid — and is much cheaper than lowering it.
+
+## scenes
+
+Per-scene overrides, applied on every switch. A scene's entry wins over the top-level `aurora` and `audio.volume` values for as long as that scene is showing; anything left out falls back to the global setting.
+
+```jsonc
+"scenes": {
+  "aurora": { "intensity": 1.6, "speed": 0.16, "height": 0.95, "volume": 0.18 },
+  "kelp":   { "intensity": 1.15, "speed": 0.13, "height": 0.75, "volume": 0.22 }
+}
+```
+
+Only `intensity`, `speed`, `height`, and `volume` are read here.
+
+## installed
+
+Ids from the optional theme library that you have installed from the console. Empty means core scenes only.
+
+```jsonc
+"installed": []
+```
+
+An installed theme's shader is fetched the first time that scene is shown, and its id joins the Win+`]` rotation. Ids that are not in `web/themes/index.json` are ignored.
 
 ## render
 
@@ -199,15 +225,16 @@ Optional clock overlay.
 
 ## audio
 
-Five scenes — Petrichor, Kelp, Murmur, Cicada, and Rime — generate their own soundscape from oscillators and filtered noise. No audio files are shipped.
+Scenes generate their own soundscape from oscillators and filtered noise. No audio files are shipped.
 
 ```jsonc
 "audio": {
-  "volume": 0.2  // 0 silences them.
+  "enabled": true,  // false silences everything, regardless of volume.
+  "volume":  0.2    // Overridden per scene by scenes.<id>.volume.
 }
 ```
 
-Audio is disabled outright when the scene is embedded in an iframe, so the preview on the site stays quiet.
+Audio is off outright when the scene is embedded in an iframe, so the preview on the site stays quiet.
 
 ---
 

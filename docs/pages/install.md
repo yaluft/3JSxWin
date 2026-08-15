@@ -92,7 +92,7 @@ First run downloads the WebView2 NuGet package (needs a connection). You should 
 .\dist\Backdrop.exe --window
 ```
 
-A 1280×720 window opens with the aurora in it. This confirms the shader compiled and your GPU is working, before anything touches your desktop. Press `]` and `[` to walk through the other fifteen scenes and `P` to shuffle the palette. Close it when satisfied.
+A 1280×720 window opens with the aurora in it. This confirms the shader compiled and your GPU is working, before anything touches your desktop. Press `]` and `[` to walk through the other eight core scenes and `P` to shuffle the palette. Close it when satisfied.
 
 ---
 

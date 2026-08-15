@@ -206,7 +206,6 @@ const COMPOSITE = /* glsl */ `
 
 export const ASCII_DEFAULTS = {
   terrascii: { cellPx: 6, minCols: 80, maxCols: 480 },
-  hexascii: { cellPx: 6, minCols: 80, maxCols: 480 },
   warpscii: { cellPx: 6, minCols: 80, maxCols: 480 },
   blobscii: { cellPx: 6, minCols: 80, maxCols: 480 },
 };
