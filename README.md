@@ -130,7 +130,7 @@ The aurora is a full-screen shader quad; the motes are a GPU points field. Both 
 
 Desktop mode no longer falls back to a window. It retries silently. `Chosen layer : None` means Explorer is not running normally.
 
-Full walkthrough: [INSTALL.md](INSTALL.md). Config reference: [docs/pages/configure.md](docs/pages/configure.md).
+Full walkthrough: [INSTALL.md](INSTALL.md). Config reference: [docs/pages/configure.md](docs/pages/configure.md). Microsoft Store: [docs/publish-ms-store.md](docs/publish-ms-store.md).
 
 ## Site
 

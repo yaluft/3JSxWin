@@ -1,5 +1,7 @@
 # Install
 
+Store listing (not implemented in this tree): [docs/publish-ms-store.md](docs/publish-ms-store.md).
+
 Roughly ten minutes, most of it waiting on the SDK download.
 
 ## 0. What you need

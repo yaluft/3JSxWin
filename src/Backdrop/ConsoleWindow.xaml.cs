@@ -105,6 +105,13 @@ public partial class ConsoleWindow : Window
         core.Navigate($"https://{VirtualHost}/console.html");
     }
 
+    protected override void OnClosed(EventArgs e)
+    {
+        try { Web?.Dispose(); }
+        catch (Exception ex) { Log.Write("Console WebView2 release", ex); }
+        base.OnClosed(e);
+    }
+
     protected override void OnSourceInitialized(EventArgs e)
     {
         base.OnSourceInitialized(e);

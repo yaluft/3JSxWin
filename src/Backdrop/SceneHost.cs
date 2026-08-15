@@ -30,6 +30,7 @@ internal sealed class SceneHost : IDisposable
 
     private CoreWebView2Environment? _environment;
     private ConsoleWindow? _console;
+    private bool _rebuilding;
 
     internal bool IsWindowedMode { get; private set; }
     internal LayoutMode Mode { get; private set; }
@@ -75,7 +76,9 @@ internal sealed class SceneHost : IDisposable
                 "--disable-background-timer-throttling",
                 "--disable-backgrounding-occluded-windows",
                 "--disable-renderer-backgrounding",
-                "--autoplay-policy=no-user-gesture-required")
+                "--autoplay-policy=no-user-gesture-required",
+                "--disable-logging",
+                "--log-level=3")
         };
 
         _environment = await CoreWebView2Environment.CreateAsync(null, userData, envOptions);
@@ -109,6 +112,7 @@ internal sealed class SceneHost : IDisposable
     {
         var window = new MainWindow(_options, bounds, _environment!, IsWindowedMode);
         window.DisplayChanged += OnAnyWindowDisplayChanged;
+        window.Closed += (_, _) => OnWindowClosed(window);
         _windows.Add(window);
         window.Show();
     }
@@ -159,12 +163,29 @@ internal sealed class SceneHost : IDisposable
 
     private void CloseAllWindows()
     {
-        foreach (var window in _windows.ToArray())
+        _rebuilding = true;
+        try
         {
-            window.DisplayChanged -= OnAnyWindowDisplayChanged;
-            window.Close();
+            foreach (var window in _windows.ToArray())
+            {
+                window.DisplayChanged -= OnAnyWindowDisplayChanged;
+                window.ReleaseWeb();
+                window.Close();
+            }
+            _windows.Clear();
         }
-        _windows.Clear();
+        finally
+        {
+            _rebuilding = false;
+        }
+    }
+
+    private void OnWindowClosed(MainWindow window)
+    {
+        window.DisplayChanged -= OnAnyWindowDisplayChanged;
+        _windows.Remove(window);
+        if (!_rebuilding && IsWindowedMode && _windows.Count == 0)
+            Application.Current.Shutdown();
     }
 
     private void OnAnyWindowDisplayChanged()
@@ -252,6 +273,52 @@ internal sealed class SceneHost : IDisposable
                 break;
             case "close":
                 _console?.Close();
+                break;
+            case "host":
+                HandleHostAction(root);
+                break;
+        }
+    }
+
+    private void HandleHostAction(JsonElement root)
+    {
+        if (!root.TryGetProperty("action", out var action)) return;
+
+        switch (action.GetString())
+        {
+            case "window":
+                ToggleWindowedMode();
+                break;
+            case "layout-single":
+                SetLayoutMode(LayoutMode.Single);
+                break;
+            case "layout-span":
+                SetLayoutMode(LayoutMode.SpanAll);
+                break;
+            case "layout-duplicate":
+                SetLayoutMode(LayoutMode.Duplicate);
+                break;
+            case "reload":
+                ReloadScene();
+                break;
+            case "folder":
+                OpenSceneFolder();
+                break;
+            case "devtools":
+                OpenDevTools();
+                break;
+            case "log":
+                OpenLog();
+                break;
+            case "diagnose":
+                CopyDiagnostics();
+                break;
+            case "quit":
+                Application.Current.Shutdown();
+                break;
+            case "kill":
+                try { Environment.Exit(1); }
+                finally { System.Diagnostics.Process.GetCurrentProcess().Kill(); }
                 break;
         }
     }
