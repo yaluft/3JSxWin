@@ -2,54 +2,107 @@
 // https://offscreencanvas.com/renders/webgl-ascii/
 //
 // Pass 1 writes lit colour + luminance. Pass 2 maps each cell onto a
-// 32-glyph density ramp, tinted with the sampled colour.
+// 64-glyph density ramp, tinted with the sampled colour.
+//
+// Set 0 — extended density ramp (classic ASCII + block elements + box-drawing)
+// Set 1 — Nerd Font icon set (powerline arrows, branch, star, circle, lightning,
+//          spinner, progress bars, file/folder icons, devicons, etc.)
+//          Requires JetBrainsMonoNLNerdFont-Regular.ttf served from ./fonts/
+//          Reference: https://www.nerdfonts.com  (v3.2.1, JetBrainsMono variant)
+//          Font files bundled at: scene/fonts/JetBrainsMonoNLNerdFont-Regular.ttf
+//                                  scene/fonts/JetBrainsMonoNLNerdFontMono-Regular.ttf
 
 import * as THREE from 'three';
 import { hexToRgb } from './config.js';
 
-export const ASCII_SETS = 1;
-export const ASCII_LEVELS = 32;
+export const ASCII_SETS = 2;
+export const ASCII_LEVELS = 64;
 
-const SETS = [
-  [
-    ' ', '.', '`', '\'', ':', '-', '~', '+',
-    '=', '*', 'c', 'o', 'x', 'z', 'n', 'u',
-    'v', 'a', 'h', 'k', 'b', 'd', '#', '%',
-    '&', '8', '@', 'W', 'M', 'B', '$', '█',
-  ],
+// ── Set 0: 64-glyph luminance ramp ────────────────────────────────────────────
+// Ordered lightest → darkest so level = floor(luminance * 64)
+// Draws on the standard monospace stack (Cascadia / Consolas / Courier New).
+// Block elements (U+2580-259F) and box-drawing (U+2500-257F) are included
+// because every modern Windows terminal font covers them.
+const SET_DENSITY = [
+  /* 00-07  near-empty */ ' ', '\u00b7', '.', '\u2024', '`', '\u02c8', '\'', ':',
+  /* 08-15  light */      ';', '-', '\u2500', '~', '+', '\u250c', '\u2510', '\u2514',
+  /* 16-23  mid-low */    '=', '\u2518', '\u252c', '\u2534', '\u253c', '*', 'c', 'o',
+  /* 24-31  mid */        'x', 'z', 'n', 'u', 'v', 'a', 'e', 'h',
+  /* 32-39  mid-high */   'k', 'b', 'd', 'p', 'q', '#', '%', '\u2591',
+  /* 40-47  dense */      '&', '8', '\u2592', '@', 'W', '\u2593', 'M', 'B',
+  /* 48-55  very dense */ '$', '\u2588', '\u2589', '\u258a', '\u258b', '\u258c', '\u258d', '\u258e',
+  /* 56-63  solid */      '\u258f', '\u2580', '\u2584', '\u2596', '\u2597', '\u2598', '\u259b', '\u2599',
+];
+
+// ── Set 1: 64 Nerd Font glyphs ordered by visual weight ────────────────────────
+// Codepoints from the Nerd Fonts private-use area (U+E000–U+F8FF / U+100000+).
+// Font: JetBrainsMonoNLNerdFont-Regular (v3.2.1) — bundled at scene/fonts/.
+// These are used by the Nerd Font atlas pass which themes may opt into.
+const SET_NERD = [
+  /* powerline / separators */
+  '\ue0b0', '\ue0b1', '\ue0b2', '\ue0b3', '\ue0b4', '\ue0b5', '\ue0b6', '\ue0b7',
+  /* branch / vcs */
+  '\ue0a0', '\ue0a1', '\ue0a2', '\uf418', '\uf126', '\uf408', '\uf09b', '\uf7d3',
+  /* status / indicators */
+  '\uf005', '\uf006', '\uf089', '\uf111', '\uf10c', '\uf192', '\uf444', '\uf445',
+  /* lightning / energy */
+  '\uf0e7', '\uf1e6', '\uf492', '\uf4b3', '\uf588', '\uf58a', '\uf58b', '\uf58c',
+  /* files / folder */
+  '\uf15b', '\uf15c', '\uf07b', '\uf07c', '\uf016', '\uf0f6', '\uf1c9', '\uf489',
+  /* arrows / navigation */
+  '\uf061', '\uf060', '\uf062', '\uf063', '\uf101', '\uf100', '\uf077', '\uf078',
+  /* terminal / devicons */
+  '\uf489', '\uf121', '\uf017', '\uf120', '\uf109', '\uf179', '\uf17c', '\uf462',
+  /* spinners / progress (visually heavy last) */
+  '\uf251', '\uf252', '\uf253', '\uf254', '\uf110', '\uf526', '\uf527', '\uf0c8',
 ];
 
 const CELL_W = 64;
 const CELL_H = 96;
 
+// Nerd Font src — loaded once, shared by both atlas builders.
+// The font files live alongside the scenes so a relative URL works from any host.
+const NERD_FONT_URL = new URL('./fonts/JetBrainsMonoNLNerdFont-Regular.ttf', import.meta.url).href;
+
 let sharedAtlas = null;
+let nerdAtlas = null;
+let nerdFontReady = false;
 
-export function getGlyphAtlas() {
-  if (sharedAtlas) return sharedAtlas;
+// Pre-load the Nerd Font so the atlas canvas can use it synchronously once done.
+const nerdFontFace = new FontFace('JetBrainsMonoNLNerdFont', `url('${NERD_FONT_URL}')`);
+const nerdFontPromise = nerdFontFace.load().then((face) => {
+  document.fonts.add(face);
+  nerdFontReady = true;
+}).catch(() => {
+  // Non-fatal: Nerd Font atlas will fall back to standard monospace glyphs.
+});
 
-  const canvas = document.createElement('canvas');
-  canvas.width = CELL_W * ASCII_LEVELS;
-  canvas.height = CELL_H * ASCII_SETS;
+function paintAtlas(canvas, sets, fontStack) {
   const ctx = canvas.getContext('2d');
   ctx.fillStyle = '#000';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
   ctx.fillStyle = '#fff';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.font = `700 ${Math.floor(CELL_H * 0.72)}px "Cascadia Mono","Consolas","Courier New",monospace`;
+  ctx.font = `700 ${Math.floor(CELL_H * 0.72)}px ${fontStack}`;
 
-  SETS.forEach((row, y) => {
+  sets.forEach((row, y) => {
     row.forEach((ch, x) => {
       const cx = (x + 0.5) * CELL_W;
       const cy = (y + 0.54) * CELL_H;
-      if (ch === '█') {
+      // Solid block: fill the entire cell for a true 100 % luminance entry.
+      const cp = ch.codePointAt(0);
+      const isSolid = cp === 0x2588 /* █ */ || cp === 0x2599 || cp === 0x259b;
+      if (isSolid) {
         ctx.fillRect(x * CELL_W, y * CELL_H, CELL_W, CELL_H);
       } else {
         ctx.fillText(ch, cx, cy);
       }
     });
   });
+}
 
+function makeTexture(canvas) {
   const tex = new THREE.CanvasTexture(canvas);
   tex.flipY = false;
   tex.generateMipmaps = false;
@@ -58,8 +111,45 @@ export function getGlyphAtlas() {
   tex.wrapS = THREE.ClampToEdgeWrapping;
   tex.wrapT = THREE.ClampToEdgeWrapping;
   tex.needsUpdate = true;
-  sharedAtlas = tex;
   return tex;
+}
+
+/** Standard density-ramp atlas (ASCII + block / box-drawing glyphs, 2 rows × 64 cols). */
+export function getGlyphAtlas() {
+  if (sharedAtlas) return sharedAtlas;
+
+  const canvas = document.createElement('canvas');
+  canvas.width = CELL_W * ASCII_LEVELS;
+  canvas.height = CELL_H * ASCII_SETS;
+  // Row 0: density ramp. Row 1: same ramp mirrored — reserved for future sets.
+  paintAtlas(canvas, [SET_DENSITY, SET_DENSITY],
+    '"Cascadia Mono","Consolas","Courier New",monospace');
+  sharedAtlas = makeTexture(canvas);
+  return sharedAtlas;
+}
+
+/**
+ * Nerd Font atlas — 2 rows × 64 cols.
+ * Row 0: standard density ramp (identical to getGlyphAtlas row 0).
+ * Row 1: Nerd Font icon set (powerline, branch, dev-icons, etc.).
+ * Returns a Promise<THREE.Texture> that resolves once the font is loaded.
+ */
+export async function getNerdAtlas() {
+  if (nerdAtlas) return nerdAtlas;
+  await nerdFontPromise;
+
+  const canvas = document.createElement('canvas');
+  canvas.width = CELL_W * ASCII_LEVELS;
+  canvas.height = CELL_H * ASCII_SETS;
+
+  const nerdStack = nerdFontReady
+    ? '"JetBrainsMonoNLNerdFont","Cascadia Mono","Consolas","Courier New",monospace'
+    : '"Cascadia Mono","Consolas","Courier New",monospace';
+
+  // Row 0: standard density so the composite shader works for both atlas types.
+  paintAtlas(canvas, [SET_DENSITY, SET_NERD], nerdStack);
+  nerdAtlas = makeTexture(canvas);
+  return nerdAtlas;
 }
 
 const VERTEX = /* glsl */ `
@@ -206,8 +296,10 @@ const COMPOSITE = /* glsl */ `
 
 export const ASCII_DEFAULTS = {
   terrascii: { cellPx: 6, minCols: 80, maxCols: 480 },
-  warpscii: { cellPx: 6, minCols: 80, maxCols: 480 },
-  blobscii: { cellPx: 6, minCols: 80, maxCols: 480 },
+  warpscii:  { cellPx: 6, minCols: 80, maxCols: 480 },
+  blobscii:  { cellPx: 6, minCols: 80, maxCols: 480 },
+  // bayline uses a tighter cell to pack more glyph detail into the city grid
+  bayline:   { cellPx: 4, minCols: 140, maxCols: 720 },
 };
 
 export const ASCII_SCENE_IDS = new Set(Object.keys(ASCII_DEFAULTS));

@@ -384,6 +384,243 @@ const MURMUR = COMMON + /* glsl */ `
   }
 `;
 
+const VORTEX = COMMON + /* glsl */ `
+  // Three nested vortex attractors — each pole pulls field lines into a
+  // logarithmic spiral arm. The arms precess slowly and shed charged wisps.
+  void main() {
+    vec2 uv = vUv;
+    float aspect = uResolution.x / max(uResolution.y, 1.0);
+    float t = uTime * uSpeed * 0.55;
+    vec2 p = vec2((uv.x - 0.5) * aspect, uv.y - 0.5);
+
+    // Three vortex centres on a lazy orbit.
+    vec2 v0 = vec2(cos(t * 0.29) * 0.38, sin(t * 0.23) * 0.28);
+    vec2 v1 = vec2(cos(t * 0.21 + 2.09) * 0.32, sin(t * 0.17 + 2.09) * 0.24);
+    vec2 v2 = vec2(cos(t * 0.18 + 4.19) * 0.25, sin(t * 0.31 + 4.19) * 0.20);
+
+    // Superposed stream-function: each vortex contributes a log-radius winding.
+    float psi = 0.0;
+    psi += atan(p.y - v0.y, p.x - v0.x) - log(max(length(p - v0), 0.001)) * 0.5;
+    psi -= atan(p.y - v1.y, p.x - v1.x) - log(max(length(p - v1), 0.001)) * 0.4;
+    psi += atan(p.y - v2.y, p.x - v2.x) * 0.6;
+
+    float arms   = pow(1.0 - abs(sin(psi * (4.0 + uHeight * 5.0))), 9.0);
+    float inner  = pow(1.0 - abs(sin(psi * 2.0 + t * 0.8)), 14.0) * 0.6;
+    float ribbon = (arms + inner) * uIntensity;
+
+    // Eye brightness at each vortex centre.
+    float eye0 = exp(-length(p - v0) * 22.0);
+    float eye1 = exp(-length(p - v1) * 22.0);
+    float eye2 = exp(-length(p - v2) * 22.0);
+    float eyes  = eye0 + eye1 + eye2;
+
+    // Background swirl gradient.
+    float swirl = 0.5 + 0.5 * sin(psi * 1.2 - t * 0.4);
+    vec3 col = mix(uVoid, uTide, 0.35 + 0.22 * swirl);
+    col += uVerdant * ribbon * 0.9;
+    col += uIris   * ribbon * (0.4 + 0.6 * smoothstep(-0.8, 0.8, p.y));
+    col += uFrost  * eyes   * uHorizonGlow * 1.2;
+
+    // Wisp streaks shed along the arms.
+    float wisp = hash21(vec2(floor(psi * 9.0), floor(t * 1.5)));
+    col += uFrost * step(0.91, wisp) * ribbon * uTwinkle * 0.8;
+
+    gl_FragColor = vec4(finish(col, uv), 1.0);
+  }
+`;
+
+const PLASMA = COMMON + /* glsl */ `
+  // Interference plasma: three phase-shifted sinusoidal wavefronts whose
+  // crossings produce Moiré fire patterns with hot-spot flares.
+  void main() {
+    vec2 uv = vUv;
+    float aspect = uResolution.x / max(uResolution.y, 1.0);
+    float t = uTime * uSpeed * 0.65;
+    vec2 p = vec2((uv.x - 0.5) * aspect, uv.y - 0.5);
+
+    // Three oscillating source points.
+    vec2 s0 = vec2(sin(t * 0.41) * 0.45, cos(t * 0.33) * 0.30);
+    vec2 s1 = vec2(cos(t * 0.27) * 0.38, sin(t * 0.22) * 0.36);
+    vec2 s2 = vec2(sin(t * 0.19 + 1.5) * 0.30, cos(t * 0.37 + 0.8) * 0.22);
+
+    float freq = 7.0 + uHeight * 9.0;
+    float w0 = sin(length(p - s0) * freq - t * 2.2);
+    float w1 = sin(length(p - s1) * freq * 0.88 + t * 1.9 + 1.2);
+    float w2 = sin(length(p - s2) * freq * 1.14 - t * 1.6 + 2.4);
+
+    // Interference sum → plasma value in [-1, 1].
+    float plasma = (w0 + w1 + w2) / 3.0;
+
+    // Two bands: ribbons near zero crossings, hot spots near ±peak.
+    float ribbon = pow(1.0 - abs(plasma), 6.0) * uIntensity;
+    float hot    = pow(abs(plasma), 12.0) * uIntensity * 0.7;
+
+    // Palette: cold → verdant → iris → frost at peak.
+    vec3 col = mix(uVoid, uTide, 0.28 + 0.22 * plasma);
+    col = mix(col, uVerdant, ribbon * 0.85);
+    col = mix(col, uIris,   ribbon * (0.5 + 0.5 * smoothstep(-1.0, 1.0, plasma)));
+    col += uFrost * hot;
+    col += uFrost * exp(-(p.x * p.x + p.y * p.y) * 6.0) * uHorizonGlow * 0.4;
+
+    // Bright motes at wavefront intersections.
+    float mote = step(0.94, hash21(vec2(floor(plasma * 18.0 + t), floor(p.x * 8.0))));
+    col += uFrost * mote * ribbon * uTwinkle;
+
+    gl_FragColor = vec4(finish(col, uv), 1.0);
+  }
+`;
+
+const PULSAR = COMMON + /* glsl */ `
+  // A rotating neutron star: two conical jets sweep the frame at each pole,
+  // magnetic latitude bands, and relativistic streak halos.
+  void main() {
+    vec2 uv = vUv;
+    float aspect = uResolution.x / max(uResolution.y, 1.0);
+    float t = uTime * uSpeed * 0.8;
+    vec2 p = vec2((uv.x - 0.5) * aspect, uv.y - 0.5);
+
+    float r   = length(p);
+    float ang = atan(p.y, p.x);
+
+    // Rotation angle of the magnetic axis.
+    float spin = t * 1.85;
+
+    // Jet beam: each pole fires a thin cone that sweeps as the star spins.
+    float beamW = 0.04 + 0.03 * uHeight;
+    float jetA  = abs(sin(ang - spin));
+    float jetB  = abs(sin(ang - spin + 3.14159));
+    float jet   = (pow(1.0 - min(jetA, 1.0), 18.0 / beamW)
+                 + pow(1.0 - min(jetB, 1.0), 18.0 / beamW))
+                * exp(-r * 2.5) * uIntensity;
+
+    // Magnetic latitude bands (like dipole field lines viewed head-on).
+    float lat   = cos(ang - spin) * r;
+    float bands = pow(abs(sin(lat * (5.0 + uHeight * 7.0) - t * 0.5)), 8.0);
+
+    // Relativistic halo around the core.
+    float halo  = exp(-r * 12.0) * uHorizonGlow;
+
+    // Streak wisps along the jet sweepline.
+    float streak = hash21(vec2(floor((ang - spin) * 16.0), floor(t * 3.0)));
+    float wisp   = step(0.90, streak) * jet * uTwinkle;
+
+    vec3 col = mix(uVoid, uTide, 0.32 + 0.2 * bands * (1.0 - r * 1.5));
+    col += uVerdant * bands * 0.55 * (1.0 - smoothstep(0.0, 0.65, r));
+    col += uIris    * jet   * 1.1;
+    col += uFrost   * halo;
+    col += uFrost   * wisp  * 0.9;
+
+    gl_FragColor = vec4(finish(col, uv), 1.0);
+  }
+`;
+
+const LATTICE = COMMON + /* glsl */ `
+  // A 2-D crystal charge lattice: nodes on a warped grid exchange field energy
+  // along glowing potential lines, driven by two travelling waves.
+  void main() {
+    vec2 uv = vUv;
+    float aspect = uResolution.x / max(uResolution.y, 1.0);
+    float t = uTime * uSpeed * 0.5;
+    vec2 p = vec2((uv.x - 0.5) * aspect, uv.y - 0.5);
+
+    // Gently breathing grid spacing.
+    float spacing = 0.18 + 0.04 * sin(t * 0.34);
+    vec2 cell = floor(p / spacing + 0.5);
+    vec2 local = p - cell * spacing;   // in-cell coords
+
+    // Per-node charge driven by two plane waves.
+    float wave1 = sin(cell.x * 1.7 + cell.y * 0.9 - t * 2.1);
+    float wave2 = cos(cell.x * 0.8 - cell.y * 1.4 + t * 1.6);
+    float charge = (wave1 + wave2) * 0.5;           // [-1, 1]
+    float absQ   = abs(charge);
+
+    // Node glow.
+    float node = exp(-dot(local, local) / (spacing * spacing * 0.06))
+               * (0.4 + 0.6 * absQ);
+
+    // Field lines: iso-contours of the bilinear potential field.
+    // Sample four neighbours to estimate potential at p.
+    vec2 c00 = cell, c10 = cell + vec2(1.0, 0.0);
+    vec2 c01 = cell + vec2(0.0, 1.0), c11 = cell + vec2(1.0, 1.0);
+    float q00 = sin(c00.x * 1.7 + c00.y * 0.9 - t * 2.1) + cos(c00.x * 0.8 - c00.y * 1.4 + t * 1.6);
+    float q10 = sin(c10.x * 1.7 + c10.y * 0.9 - t * 2.1) + cos(c10.x * 0.8 - c10.y * 1.4 + t * 1.6);
+    float q01 = sin(c01.x * 1.7 + c01.y * 0.9 - t * 2.1) + cos(c01.x * 0.8 - c01.y * 1.4 + t * 1.6);
+    float q11 = sin(c11.x * 1.7 + c11.y * 0.9 - t * 2.1) + cos(c11.x * 0.8 - c11.y * 1.4 + t * 1.6);
+    vec2 f = (local / spacing) + 0.5;   // [0,1] within cell
+    float phi = mix(mix(q00, q10, f.x), mix(q01, q11, f.x), f.y) * 0.5;
+    float fieldLine = pow(1.0 - abs(sin(phi * (4.0 + uHeight * 6.0))), 10.0);
+
+    // Vignette the lattice from centre outward.
+    float r   = length(p);
+    float fog = exp(-r * 1.6) + 0.05;
+
+    vec3 col = mix(uVoid, uTide, 0.25 + 0.3 * absQ * (1.0 - r * 1.2));
+    col += uVerdant * fieldLine * 0.8 * fog * uIntensity;
+    col += uIris    * node      * (charge > 0.0 ? 1.0 : 0.4) * fog * uIntensity;
+    col += uFrost   * node      * absQ * fog * 0.6;
+    col += uFrost   * exp(-r * 10.0) * uHorizonGlow * 0.4;
+
+    float spark = step(0.95, hash21(vec2(cell) + floor(t * 1.5))) * node;
+    col += uFrost * spark * uTwinkle;
+
+    gl_FragColor = vec4(finish(col, uv), 1.0);
+  }
+`;
+
+const FRACTURE = COMMON + /* glsl */ `
+  // Lichtenberg discharge: recursive fractal branching driven by hash noise,
+  // producing electric lightning trees with glowing branch channels.
+  float branchField(vec2 p, float seed, float t) {
+    // Recursive 4-level hash-branching potential field.
+    float phi = 0.0;
+    vec2 q = p;
+    float scale = 1.0;
+    for (int i = 0; i < 4; i++) {
+      float n = hash21(floor(q * (3.8 + float(i) * 1.4)) + seed + float(i) * 7.3);
+      float grow = fract(n + t * (0.18 + float(i) * 0.09));
+      // Branch potential decays with distance from the closest grid spine.
+      vec2 gv = fract(q * (3.8 + float(i) * 1.4)) - 0.5;
+      float spine = min(abs(gv.x), abs(gv.y));
+      phi += (1.0 - smoothstep(0.0, 0.18 - float(i) * 0.03, spine)) * grow * scale;
+      q = q * 1.72 + vec2(n * 3.1, n * 1.7);
+      scale *= 0.55;
+    }
+    return phi;
+  }
+
+  void main() {
+    vec2 uv = vUv;
+    float aspect = uResolution.x / max(uResolution.y, 1.0);
+    float t = uTime * uSpeed * 0.45;
+    vec2 p = vec2((uv.x - 0.5) * aspect, uv.y - 0.5);
+
+    // Two independent discharge trees rooted slightly off-centre.
+    float tree0 = branchField(p - vec2( 0.05, 0.0), 1.3, t);
+    float tree1 = branchField(p - vec2(-0.05, 0.0), 5.7, t + 0.37);
+    float phi   = max(tree0, tree1);
+
+    // Glowing branch channels: bright near phi peaks, dark between.
+    float channel = pow(clamp(phi, 0.0, 1.0), 1.4) * uIntensity;
+    float hot     = pow(clamp(phi - 0.65, 0.0, 0.35) / 0.35, 3.0) * uIntensity;
+
+    // Ambient field: faint background ionisation.
+    float ionise  = fbm(p * 2.2 + vec2(t * 0.18, -t * 0.12)) * 0.18 * (1.0 + uHeight);
+
+    vec3 col = mix(uVoid, uTide, 0.18 + ionise);
+    col += uVerdant * channel * 0.7;
+    col += uIris    * channel * (0.5 + 0.5 * smoothstep(-0.4, 0.4, p.x));
+    col += uFrost   * hot;
+    col += uFrost   * exp(-length(p) * 9.0) * uHorizonGlow * 0.5;
+
+    // Flicker: bright spark at channel tips each discharge cycle.
+    float cyc = fract(t * 1.2);
+    float tip  = hot * step(0.88, cyc) * step(cyc, 0.96) * uTwinkle * 2.5;
+    col += uFrost * tip;
+
+    gl_FragColor = vec4(finish(col, uv), 1.0);
+  }
+`;
+
 const FRAGMENTS = {
   terrascii: TERRASCII,
   starwell: STARWELL,
@@ -393,6 +630,11 @@ const FRAGMENTS = {
   ember: EMBER,
   kelp: KELP,
   murmur: MURMUR,
+  vortex: VORTEX,
+  plasma: PLASMA,
+  pulsar: PULSAR,
+  lattice: LATTICE,
+  fracture: FRACTURE,
 };
 
 function createShaderBackdrop(fragment, config) {
@@ -482,6 +724,10 @@ function createShaderBackdrop(fragment, config) {
 }
 
 export function createScene(name, config, themeMod = null) {
+  if (themeMod?.kind === 'ascii' && themeMod?.fragment) {
+    // ASCII theme module: G-buffer pass uses ASCII_GBUFFER preamble.
+    return createAsciiBackdrop(ASCII_GBUFFER + themeMod.fragment, config, themeMod.id ?? name);
+  }
   if (themeMod?.fragment) return createShaderBackdrop(COMMON + themeMod.fragment, config);
   const id = SCENE_IDS.includes(name) ? name : 'aurora';
   if (id === 'aurora') return createSky(config);
