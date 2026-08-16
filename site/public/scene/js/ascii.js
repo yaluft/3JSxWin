@@ -52,7 +52,7 @@ const SET_NERD = [
   /* arrows / navigation */
   '\uf061', '\uf060', '\uf062', '\uf063', '\uf101', '\uf100', '\uf077', '\uf078',
   /* terminal / devicons */
-  '\uf489', '\uf121', '\uf017', '\uf120', '\uf109', '\uf179', '\uf17c', '\uf462',
+  '\uf0e0', '\uf121', '\uf017', '\uf120', '\uf109', '\uf179', '\uf17c', '\uf462',
   /* spinners / progress (visually heavy last) */
   '\uf251', '\uf252', '\uf253', '\uf254', '\uf110', '\uf526', '\uf527', '\uf0c8',
 ];
@@ -121,7 +121,7 @@ export function getGlyphAtlas() {
   const canvas = document.createElement('canvas');
   canvas.width = CELL_W * ASCII_LEVELS;
   canvas.height = CELL_H * ASCII_SETS;
-  // Row 0: density ramp. Row 1: same ramp mirrored — reserved for future sets.
+  // Row 0: density ramp. Row 1: duplicate density ramp — reserved for future glyph sets.
   paintAtlas(canvas, [SET_DENSITY, SET_DENSITY],
     '"Cascadia Mono","Consolas","Courier New",monospace');
   sharedAtlas = makeTexture(canvas);

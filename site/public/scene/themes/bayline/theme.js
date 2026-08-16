@@ -71,7 +71,7 @@ export const fragment = /* glsl */ `
     skyCol = mix(skyCol, uFrost * 0.72, moon * (1.0 - moonCut));
 
     // ── Building layers (back → front) ─────────────────────────────────────
-    // Seven depth layers, each with its own column density and shear.
+    // Eight depth layers (zi 7→0), each with its own column density and shear.
     bool  hit    = false;
     vec4  result = vec4(0.0);
 
