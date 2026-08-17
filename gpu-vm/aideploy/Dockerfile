@@ -47,10 +47,12 @@ RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
 RUN curl -fsSL https://ollama.com/install.sh | sh || true
 RUN command -v ollama || (echo "ollama did not install" && exit 1)
 
-# ComfyUI. torch is already in the base image, so drop it from the requirements
-# rather than letting pip pull a second, conflicting build.
+# ComfyUI. torch, torchvision and torchaudio all ship in the base image, so drop
+# them from the requirements rather than letting pip pull a second, conflicting
+# build. The pattern is anchored on purpose: a bare /^torch/ would also delete
+# torchsde, which ComfyUI needs for its SDE samplers and the base image lacks.
 RUN git clone --depth 1 --branch ${COMFYUI_REF} https://github.com/comfyanonymous/ComfyUI /opt/ComfyUI \
-    && sed -i '/^torch/d; /^torchvision/d; /^torchaudio/d' /opt/ComfyUI/requirements.txt \
+    && sed -i -E '/^(torch|torchvision|torchaudio)([[:space:]]*[<>=!~].*)?$/d' /opt/ComfyUI/requirements.txt \
     && pip install --no-cache-dir -r /opt/ComfyUI/requirements.txt
 
 RUN pip install --no-cache-dir starlette uvicorn httpx websockets
