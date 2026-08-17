@@ -22,9 +22,20 @@ ENV DEBIAN_FRONTEND=noninteractive \
     PYTHONUNBUFFERED=1 \
     OLLAMA_KEEP_ALIVE=10m
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
-      curl ca-certificates git jq ttyd tmux vim less procps \
-    && rm -rf /var/lib/apt/lists/*
+# ttyd lives in Ubuntu's universe component, which isn't guaranteed to be
+# enabled in every base image — fall back to the upstream static binary so the
+# build doesn't die on the one package that might be missing.
+RUN set -eux; \
+    apt-get update; \
+    apt-get install -y --no-install-recommends \
+      curl ca-certificates git jq tmux vim less procps; \
+    if ! apt-get install -y --no-install-recommends ttyd; then \
+      curl -fsSL -o /usr/local/bin/ttyd \
+        https://github.com/tsl0922/ttyd/releases/latest/download/ttyd.x86_64; \
+      chmod +x /usr/local/bin/ttyd; \
+    fi; \
+    ttyd --version; \
+    rm -rf /var/lib/apt/lists/*
 
 # Node 22+ — required by both agent CLIs.
 RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
