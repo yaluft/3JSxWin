@@ -1,0 +1,252 @@
+#!/usr/bin/env python3
+"""llm-chat — terminal chat client for the local vLLM server.
+
+Talks the OpenAI chat-completions API over plain stdlib, so it runs with the
+system python and needs nothing installed.
+
+  llm-chat                          interactive
+  llm-chat "one-shot question"      answer and exit
+  echo prompt | llm-chat            reads stdin when it isn't a tty
+
+In-chat commands:
+  /system <text>   replace the system prompt      /clear    forget the thread
+  /model <name>    switch model                   /models   list served models
+  /temp <float>    sampling temperature           /save f   write transcript
+  /retry           regenerate the last answer     /quit
+"""
+import argparse
+import json
+import os
+import readline  # noqa: F401 — importing enables line editing + history
+import sys
+import urllib.error
+import urllib.request
+from pathlib import Path
+
+CONF = Path("/etc/llm-vm/client.env")
+HIST = Path.home() / ".llm_chat_history"
+
+DIM, BOLD, GREEN, BLUE, RED, OFF = (
+    ("\033[2m", "\033[1m", "\033[38;5;42m", "\033[38;5;69m", "\033[38;5;203m", "\033[0m")
+    if sys.stdout.isatty() else ("", "", "", "", "", "")
+)
+
+
+def load_conf():
+    conf = {}
+    if CONF.is_file():
+        for line in CONF.read_text().splitlines():
+            line = line.strip()
+            if line and not line.startswith("#") and "=" in line:
+                k, v = line.split("=", 1)
+                conf[k.strip()] = v.strip()
+    return conf
+
+
+def post_stream(base, path, payload, api_key, timeout=600):
+    """POST and yield SSE `data:` chunks as they arrive."""
+    req = urllib.request.Request(
+        base.rstrip("/") + path,
+        data=json.dumps(payload).encode(),
+        headers={
+            "Content-Type": "application/json",
+            **({"Authorization": f"Bearer {api_key}"} if api_key else {}),
+        },
+    )
+    with urllib.request.urlopen(req, timeout=timeout) as resp:
+        for raw in resp:
+            line = raw.decode("utf-8", "replace").strip()
+            if not line.startswith("data:"):
+                continue
+            data = line[5:].strip()
+            if data == "[DONE]":
+                return
+            yield json.loads(data)
+
+
+def get_json(base, path, api_key, timeout=15):
+    req = urllib.request.Request(
+        base.rstrip("/") + path,
+        headers={"Authorization": f"Bearer {api_key}"} if api_key else {},
+    )
+    with urllib.request.urlopen(req, timeout=timeout) as resp:
+        return json.load(resp)
+
+
+def explain(err, base):
+    if isinstance(err, urllib.error.HTTPError):
+        body = err.read().decode("utf-8", "replace")[:400]
+        try:
+            body = json.loads(body).get("message", body)
+        except Exception:
+            pass
+        return f"HTTP {err.code} from {base}: {body}"
+    if isinstance(err, urllib.error.URLError):
+        return (
+            f"can't reach {base} ({err.reason}).\n"
+            f"  systemctl is-active vllm   # is the server up?\n"
+            f"  journalctl -u vllm -n 50   # why not?"
+        )
+    return str(err)
+
+
+class Chat:
+    def __init__(self, args, conf):
+        self.base = args.api_base or conf.get("LLM_API_BASE", "http://127.0.0.1:8000/v1")
+        self.model = args.model or conf.get("LLM_MODEL", "")
+        self.api_key = args.api_key or conf.get("LLM_API_KEY", os.environ.get("LLM_API_KEY", ""))
+        self.temperature = args.temperature
+        self.max_tokens = args.max_tokens
+        self.messages = []
+        if args.system:
+            self.messages.append({"role": "system", "content": args.system})
+
+    def resolve_model(self):
+        if self.model:
+            return
+        try:
+            models = get_json(self.base, "/models", self.api_key)["data"]
+            self.model = models[0]["id"]
+        except Exception as err:
+            sys.exit(f"{RED}{explain(err, self.base)}{OFF}")
+
+    def ask(self, prompt=None):
+        """Send the thread (optionally appending `prompt`) and stream the reply."""
+        if prompt is not None:
+            self.messages.append({"role": "user", "content": prompt})
+
+        payload = {
+            "model": self.model,
+            "messages": self.messages,
+            "stream": True,
+            "temperature": self.temperature,
+        }
+        if self.max_tokens:
+            payload["max_tokens"] = self.max_tokens
+
+        reply, printed_header = [], False
+        try:
+            for chunk in post_stream(self.base, "/chat/completions", payload, self.api_key):
+                delta = chunk.get("choices", [{}])[0].get("delta", {})
+                piece = delta.get("content") or ""
+                if piece:
+                    if not printed_header:
+                        print(f"{GREEN}{self.model}{OFF}  ", end="", flush=True)
+                        printed_header = True
+                    print(piece, end="", flush=True)
+                    reply.append(piece)
+        except KeyboardInterrupt:
+            print(f"\n{DIM}(stopped){OFF}")
+        except Exception as err:
+            print(f"\n{RED}{explain(err, self.base)}{OFF}", file=sys.stderr)
+            self.messages.pop() if prompt is not None else None
+            return ""
+
+        print("\n")
+        text = "".join(reply)
+        self.messages.append({"role": "assistant", "content": text})
+        return text
+
+    # -------------------------------------------------------------- commands --
+
+    def command(self, line):
+        """Handle a /command. Returns False when the user wants out."""
+        cmd, _, rest = line[1:].partition(" ")
+        rest = rest.strip()
+
+        if cmd in ("quit", "exit", "q"):
+            return False
+        elif cmd == "clear":
+            keep = [m for m in self.messages if m["role"] == "system"]
+            self.messages = keep
+            print(f"{DIM}thread cleared{OFF}\n")
+        elif cmd == "system":
+            self.messages = [m for m in self.messages if m["role"] != "system"]
+            if rest:
+                self.messages.insert(0, {"role": "system", "content": rest})
+            print(f"{DIM}system prompt {'set' if rest else 'removed'}{OFF}\n")
+        elif cmd == "model":
+            if rest:
+                self.model = rest
+            print(f"{DIM}model: {self.model}{OFF}\n")
+        elif cmd == "models":
+            try:
+                for m in get_json(self.base, "/models", self.api_key)["data"]:
+                    print(f"  {m['id']}")
+            except Exception as err:
+                print(f"{RED}{explain(err, self.base)}{OFF}")
+            print()
+        elif cmd == "temp":
+            try:
+                self.temperature = float(rest)
+            except ValueError:
+                pass
+            print(f"{DIM}temperature: {self.temperature}{OFF}\n")
+        elif cmd == "retry":
+            while self.messages and self.messages[-1]["role"] == "assistant":
+                self.messages.pop()
+            if self.messages:
+                self.ask()
+        elif cmd == "save":
+            path = Path(rest or "transcript.md").expanduser()
+            path.write_text(
+                "\n\n".join(f"**{m['role']}**\n\n{m['content']}" for m in self.messages)
+            )
+            print(f"{DIM}saved to {path}{OFF}\n")
+        else:
+            print(f"{DIM}unknown command. /system /clear /model /models /temp /retry /save /quit{OFF}\n")
+        return True
+
+    def repl(self):
+        if HIST.exists():
+            try:
+                readline.read_history_file(HIST)
+            except Exception:
+                pass
+
+        print(f"\n{BOLD}{self.model}{OFF} {DIM}· {self.base} · /quit to exit{OFF}\n")
+        while True:
+            try:
+                line = input(f"{BLUE}you{OFF}  ").strip()
+            except (EOFError, KeyboardInterrupt):
+                print()
+                break
+            if not line:
+                continue
+            if line.startswith("/"):
+                if not self.command(line):
+                    break
+                continue
+            self.ask(line)
+
+        try:
+            readline.write_history_file(HIST)
+        except Exception:
+            pass
+
+
+def main():
+    conf = load_conf()
+    p = argparse.ArgumentParser(description="terminal chat against the local model server")
+    p.add_argument("prompt", nargs="*", help="one-shot prompt; omit for interactive")
+    p.add_argument("--api-base", help="default: %s" % conf.get("LLM_API_BASE", "http://127.0.0.1:8000/v1"))
+    p.add_argument("--model", "-m", help="default: whatever the server serves")
+    p.add_argument("--system", "-s", help="system prompt")
+    p.add_argument("--temperature", "-t", type=float, default=0.7)
+    p.add_argument("--max-tokens", type=int, default=0)
+    p.add_argument("--api-key", default="")
+    args = p.parse_args()
+
+    chat = Chat(args, conf)
+    chat.resolve_model()
+
+    if args.prompt:
+        chat.ask(" ".join(args.prompt))
+    elif not sys.stdin.isatty():
+        chat.ask(sys.stdin.read().strip())
+    else:
+        chat.repl()
+
+
+if __name__ == "__main__":
+    main()

@@ -1,5 +1,7 @@
 # Build
 bin/
+# ...except the gpu-vm CLIs, which are source rather than build output
+!gpu-vm/bin/
 obj/
 dist/
 dist.new/

@@ -1,0 +1,168 @@
+#!/usr/bin/env bash
+#
+# llm-vm — control the model server and the auto-shutdown guards.
+#
+#   llm-vm status            what's running, how long until the plug is pulled
+#   llm-vm hold 2h           don't shut down for the next 2h (survives idle)
+#   llm-vm unhold            drop the hold
+#   llm-vm extend 4h         push the hard lifetime cap 4h further out
+#   llm-vm idle off|on       disable / enable the idle shutdown
+#   llm-vm idle 30m          change the idle timeout
+#   llm-vm cap 24h|off       change the hard lifetime cap
+#   llm-vm off               power off now
+#   llm-vm logs [-f]         vLLM logs
+#   llm-vm restart           restart the model server
+#   llm-vm model <repo-id>   switch model (downloads, then restarts)
+#
+set -euo pipefail
+
+CONF=/etc/llm-vm/lifeguard.env
+SERVER_CONF=/etc/llm-vm/server.env
+STATE_DIR=/var/lib/llm-vm
+RUN_DIR=/run/llm-vm
+LLM_HOME=/opt/llm
+
+need_root() {
+  if [[ $EUID -ne 0 ]]; then
+    exec sudo -- "$0" "$@"
+  fi
+}
+
+# "2h" / "90m" / "45s" / bare number of minutes -> seconds
+duration_to_seconds() {
+  local d="${1,,}"
+  case "$d" in
+    *h) echo $(( ${d%h} * 3600 )) ;;
+    *m) echo $(( ${d%m} * 60 )) ;;
+    *s) echo "${d%s}" ;;
+    ''|*[!0-9]*) echo "bad duration: $1" >&2; exit 2 ;;
+    *)  echo $(( d * 60 )) ;;
+  esac
+}
+
+set_conf() {  # set_conf KEY VALUE
+  local key="$1" val="$2"
+  if grep -q "^$key=" "$CONF"; then
+    sed -i "s|^$key=.*|$key=$val|" "$CONF"
+  else
+    echo "$key=$val" >> "$CONF"
+  fi
+}
+
+cmd="${1:-status}"; shift || true
+
+case "$cmd" in
+  status)
+    echo
+    printf '  vllm      %s\n' "$(systemctl is-active vllm 2>/dev/null || echo unknown)"
+    printf '  nginx     %s\n' "$(systemctl is-active nginx 2>/dev/null || echo unknown)"
+    printf '  lifeguard %s\n' "$(systemctl is-active llm-lifeguard.timer 2>/dev/null || echo unknown)"
+    if [[ -r "$SERVER_CONF" ]]; then
+      printf '  model     %s\n' "$(grep '^MODEL=' "$SERVER_CONF" | cut -d= -f2-)"
+    fi
+    if command -v nvidia-smi >/dev/null 2>&1; then
+      nvidia-smi --query-gpu=name,utilization.gpu,memory.used,memory.total \
+        --format=csv,noheader | sed 's/^/  gpu       /'
+    fi
+    echo
+    llm-lifeguard status | sed 's/^/  /'
+    echo
+    ;;
+
+  hold)
+    need_root hold "$@"
+    secs="$(duration_to_seconds "${1:?usage: llm-vm hold 2h}")"
+    mkdir -p "$RUN_DIR"
+    echo $(( $(date +%s) + secs )) > "$RUN_DIR/hold-until"
+    rm -f "$RUN_DIR/warned-idle"
+    echo "held until $(date -d "@$(cat "$RUN_DIR/hold-until")" '+%H:%M %Z') — idle shutdown suppressed until then"
+    echo "note: the hard lifetime cap still applies (llm-vm extend to move it)"
+    ;;
+
+  unhold)
+    need_root unhold
+    rm -f "$RUN_DIR/hold-until"
+    echo "hold dropped"
+    ;;
+
+  extend)
+    need_root extend "$@"
+    secs="$(duration_to_seconds "${1:?usage: llm-vm extend 4h}")"
+    prov="$(cat "$STATE_DIR/provisioned-at")"
+    echo $(( prov + secs )) > "$STATE_DIR/provisioned-at"
+    rm -f "$RUN_DIR/warned-lifetime"
+    echo "lifetime cap moved out by $1"
+    llm-lifeguard status | grep '^lifetime'
+    ;;
+
+  idle)
+    need_root idle "$@"
+    arg="${1:?usage: llm-vm idle on|off|30m}"
+    case "$arg" in
+      on)  set_conf IDLE_SHUTDOWN on;  echo "idle shutdown on" ;;
+      off) set_conf IDLE_SHUTDOWN off; echo "idle shutdown off — this VM will now run until the lifetime cap" ;;
+      *)   mins=$(( $(duration_to_seconds "$arg") / 60 ))
+           (( mins >= 1 )) || { echo "idle timeout must be at least 1 minute" >&2; exit 2; }
+           set_conf IDLE_MINUTES "$mins"
+           set_conf IDLE_SHUTDOWN on
+           echo "idle shutdown after ${mins}min" ;;
+    esac
+    systemctl restart llm-lifeguard.timer
+    ;;
+
+  cap)
+    need_root cap "$@"
+    arg="${1:?usage: llm-vm cap 24h|off}"
+    if [[ "$arg" == off ]]; then
+      set_conf MAX_LIFETIME_HOURS 0
+      echo "lifetime cap removed — nothing will stop this VM but the idle timer"
+    else
+      hours=$(( $(duration_to_seconds "$arg") / 3600 ))
+      (( hours >= 1 )) || { echo "cap must be at least 1 hour" >&2; exit 2; }
+      set_conf MAX_LIFETIME_HOURS "$hours"
+      echo "lifetime cap set to ${hours}h from first provisioning"
+      llm-lifeguard status | grep '^lifetime'
+    fi
+    systemctl restart llm-lifeguard.timer
+    ;;
+
+  off)
+    need_root off
+    echo "stopping vllm and powering off"
+    systemctl stop vllm || true
+    systemctl poweroff
+    ;;
+
+  logs)
+    exec journalctl -u vllm "${@:---no-pager -n 100}"
+    ;;
+
+  restart)
+    need_root restart
+    systemctl restart vllm
+    echo "restarting — watch it come up with: llm-vm logs -f"
+    ;;
+
+  model)
+    need_root model "$@"
+    repo="${1:?usage: llm-vm model <hf-repo-id>}"
+    # shellcheck source=/dev/null
+    . "$SERVER_CONF"
+    echo "downloading $repo"
+    sudo -u llm env HF_HOME="${HF_HOME:-$LLM_HOME/hf-cache}" HF_HUB_ENABLE_HF_TRANSFER=1 \
+      ${HF_TOKEN:+HF_TOKEN="$HF_TOKEN"} "$LLM_HOME/venv/bin/hf" download "$repo"
+    sed -i "s|^MODEL=.*|MODEL=$repo|" "$SERVER_CONF"
+    sed -i "s|^SERVED_NAME=.*|SERVED_NAME=${repo##*/}|" "$SERVER_CONF"
+    systemctl restart vllm
+    echo "switched to $repo — llm-vm logs -f"
+    ;;
+
+  -h|--help|help)
+    sed -n '4,20p' "$0" | sed 's/^# \{0,1\}//'
+    ;;
+
+  *)
+    echo "unknown command: $cmd (try llm-vm --help)" >&2
+    exit 2
+    ;;
+esac

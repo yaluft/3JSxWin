@@ -1,0 +1,199 @@
+#!/usr/bin/env bash
+#
+# llm-lifeguard — kills the meter on an idle or long-running GPU VM.
+#
+# Two independent limits, both read from /etc/llm-vm/lifeguard.env:
+#
+#   MAX_LIFETIME_HOURS  hard cap counted from /var/lib/llm-vm/provisioned-at
+#                       (the first setup run), so reboots don't reset it.
+#   IDLE_MINUTES        no activity for this long -> power off.
+#
+# Activity is anything that means a human is using the box: an HTTP request
+# through nginx, a logged-in SSH/tty session, a running llm-chat, GPU
+# utilization above IDLE_GPU_PERCENT, or a manual hold (llm-vm hold 2h).
+#
+# Run by llm-lifeguard.timer once a minute.
+#
+set -euo pipefail
+
+CONF=/etc/llm-vm/lifeguard.env
+STATE_DIR=/var/lib/llm-vm
+RUN_DIR=/run/llm-vm
+NGINX_LOG=/var/log/nginx/llm-access.log
+
+# shellcheck source=/dev/null
+[[ -r "$CONF" ]] && . "$CONF"
+
+MAX_LIFETIME_HOURS="${MAX_LIFETIME_HOURS:-50}"
+IDLE_SHUTDOWN="${IDLE_SHUTDOWN:-on}"
+IDLE_MINUTES="${IDLE_MINUTES:-60}"
+IDLE_GPU_PERCENT="${IDLE_GPU_PERCENT:-5}"
+SHUTDOWN_ACTION="${SHUTDOWN_ACTION:-poweroff}"
+SHUTDOWN_HOOK="${SHUTDOWN_HOOK:-}"
+WARN_MINUTES="${WARN_MINUTES:-5}"
+
+mkdir -p "$STATE_DIR" "$RUN_DIR"
+NOW="$(date +%s)"
+
+[[ -f "$STATE_DIR/provisioned-at" ]] || echo "$NOW" > "$STATE_DIR/provisioned-at"
+PROVISIONED="$(cat "$STATE_DIR/provisioned-at")"
+
+# ------------------------------------------------------- activity probes -----
+
+file_age() {  # seconds since mtime, or a huge number if the file is missing
+  local f="$1"
+  [[ -e "$f" ]] || { echo 999999999; return; }
+  echo $(( NOW - $(stat -c %Y "$f") ))
+}
+
+gpu_busy() {
+  command -v nvidia-smi >/dev/null 2>&1 || return 1
+  local util
+  util="$(nvidia-smi --query-gpu=utilization.gpu --format=csv,noheader,nounits 2>/dev/null \
+          | sort -rn | head -1)" || return 1
+  [[ -n "$util" ]] && (( util > IDLE_GPU_PERCENT ))
+}
+
+sessions_open() {
+  # Any interactive login (SSH counts) means someone is here.
+  [[ -n "$(who 2>/dev/null)" ]]
+}
+
+client_running() {
+  pgrep -f '[l]lm-chat' >/dev/null 2>&1
+}
+
+held_until() {
+  [[ -f "$RUN_DIR/hold-until" ]] && cat "$RUN_DIR/hold-until" || echo 0
+}
+
+# Reasons, most human-visible first.
+active_reason() {
+  local http_age
+  http_age="$(file_age "$NGINX_LOG")"
+
+  (( $(held_until) > NOW ))  && { echo "manual hold"; return 0; }
+  sessions_open              && { echo "login session"; return 0; }
+  client_running             && { echo "llm-chat running"; return 0; }
+  (( http_age < 60 ))        && { echo "http request"; return 0; }
+  gpu_busy                   && { echo "gpu busy"; return 0; }
+  return 1
+}
+
+# ------------------------------------------------------------- shutdown ------
+
+announce() {
+  local msg="$1"
+  command -v wall >/dev/null 2>&1 && echo "$msg" | wall -n 2>/dev/null || true
+  logger -t llm-lifeguard "$msg" 2>/dev/null || true
+}
+
+pull_the_plug() {
+  local why="$1"
+  announce "llm-lifeguard: $why — powering off now."
+  echo "$(date -Is) shutdown: $why" >> "$STATE_DIR/lifeguard.log"
+
+  # Stop the model server cleanly so vLLM doesn't leave a wedged GPU behind.
+  systemctl stop vllm 2>/dev/null || true
+
+  if [[ -n "$SHUTDOWN_HOOK" && -x "$SHUTDOWN_HOOK" ]]; then
+    # Hooks exist so you can delete the OVH instance instead of just stopping
+    # it — a stopped instance is still billed.
+    "$SHUTDOWN_HOOK" "$why" || logger -t llm-lifeguard "shutdown hook failed"
+  fi
+
+  case "$SHUTDOWN_ACTION" in
+    none)     logger -t llm-lifeguard "SHUTDOWN_ACTION=none, staying up" ;;
+    hook)     : ;;   # the hook is the whole action
+    *)        systemctl poweroff ;;
+  esac
+}
+
+warn_once() {
+  local key="$1" msg="$2"
+  [[ -f "$RUN_DIR/warned-$key" ]] && return 0
+  touch "$RUN_DIR/warned-$key"
+  announce "$msg"
+}
+
+# ---------------------------------------------------------------- checks -----
+
+do_check() {
+  # 1. hard lifetime cap
+  if (( MAX_LIFETIME_HOURS > 0 )); then
+    local deadline=$(( PROVISIONED + MAX_LIFETIME_HOURS * 3600 ))
+    local left=$(( deadline - NOW ))
+    if (( left <= 0 )); then
+      pull_the_plug "hit the ${MAX_LIFETIME_HOURS}h lifetime cap"
+      return
+    fi
+    if (( left <= WARN_MINUTES * 60 )); then
+      warn_once lifetime \
+        "llm-lifeguard: ${MAX_LIFETIME_HOURS}h cap reached in $(( left / 60 ))min. 'llm-vm extend 4h' to push it back."
+    fi
+  fi
+
+  # 2. idle shutdown
+  if [[ "$IDLE_SHUTDOWN" != "on" ]]; then
+    return
+  fi
+
+  local reason
+  if reason="$(active_reason)"; then
+    echo "$NOW" > "$STATE_DIR/last-active"
+    echo "$reason" > "$STATE_DIR/last-active-reason"
+    rm -f "$RUN_DIR/warned-idle"
+    return
+  fi
+
+  [[ -f "$STATE_DIR/last-active" ]] || echo "$NOW" > "$STATE_DIR/last-active"
+  local idle=$(( NOW - $(cat "$STATE_DIR/last-active") ))
+  local limit=$(( IDLE_MINUTES * 60 ))
+
+  if (( idle >= limit )); then
+    pull_the_plug "idle for ${IDLE_MINUTES}min"
+  elif (( limit - idle <= WARN_MINUTES * 60 )); then
+    warn_once idle \
+      "llm-lifeguard: idle — powering off in $(( (limit - idle) / 60 ))min unless something happens."
+  fi
+}
+
+do_status() {
+  local reason idle=0 last
+  if reason="$(active_reason)"; then
+    echo "state       active ($reason)"
+  else
+    last="$( [[ -f "$STATE_DIR/last-active" ]] && cat "$STATE_DIR/last-active" || echo "$NOW" )"
+    idle=$(( NOW - last ))
+    echo "state       idle for $(( idle / 60 ))min"
+  fi
+
+  if [[ "$IDLE_SHUTDOWN" == "on" ]]; then
+    echo "idle-off    on, after ${IDLE_MINUTES}min  (poweroff in $(( IDLE_MINUTES - idle / 60 ))min at this rate)"
+  else
+    echo "idle-off    off"
+  fi
+
+  if (( MAX_LIFETIME_HOURS > 0 )); then
+    local deadline=$(( PROVISIONED + MAX_LIFETIME_HOURS * 3600 ))
+    local left=$(( deadline - NOW ))
+    printf 'lifetime    %sh cap, %dh %dm left (until %s)\n' \
+      "$MAX_LIFETIME_HOURS" $(( left / 3600 )) $(( left % 3600 / 60 )) \
+      "$(date -d "@$deadline" '+%Y-%m-%d %H:%M %Z')"
+  else
+    echo "lifetime    no cap"
+  fi
+
+  local hold
+  hold="$(held_until)"
+  if (( hold > NOW )); then
+    echo "hold        until $(date -d "@$hold" '+%H:%M %Z') ($(( (hold - NOW) / 60 ))min)"
+  fi
+  echo "action      $SHUTDOWN_ACTION${SHUTDOWN_HOOK:+ + hook $SHUTDOWN_HOOK}"
+}
+
+case "${1:-check}" in
+  check)  do_check ;;
+  status) do_status ;;
+  *) echo "usage: llm-lifeguard [check|status]" >&2; exit 2 ;;
+esac
