@@ -35,7 +35,7 @@ UI, paste the key into **settings**.
 The container ([`aideploy/serve.py`](aideploy/serve.py)) runs vLLM on loopback and
 fronts it with one public port, because AI Deploy exposes exactly one:
 
-```
+```text
 GET /          chat UI
     /v1/...    OpenAI-compatible API (bearer token = the printed key)
     /health    readiness — 200 once weights are loaded
