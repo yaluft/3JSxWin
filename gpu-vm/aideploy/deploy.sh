@@ -1,65 +1,80 @@
 #!/usr/bin/env bash
 #
-# deploy.sh — build the image, push it to the OVHcloud shared registry, and
-# start (or restart) the AI Deploy app that serves the model + chat UI.
+# deploy.sh — build the image, push it to Docker Hub, and start the AI Deploy app.
 #
-# Prerequisites, once per machine:
-#   ovhai login                                  # CLI auth
-#   ovhai registry list                          # copy the shared registry address
-#   docker login <registry-address>              # credentials from the same output
+# Prerequisites, once:
+#   docker login                  # Docker Hub
+#   ovhai login                   # OVHcloud AI CLI
+#
+# If the Docker Hub repo is private, add it to AI Deploy as an authorised
+# registry first (Control Panel -> AI & ML -> Registries, or `ovhai registry add`),
+# otherwise OVH cannot pull the image.
 #
 # Usage:
-#   REGISTRY=xxxx.c1.gra.container-registry.ovh.net/ai-deploy \
-#   HF_TOKEN=hf_xxx ./deploy.sh
-#
-#   MODEL=Qwen/Qwen3-8B FLAVOR=l4-1-gpu ./deploy.sh
+#   DOCKER_USER=yourname ./deploy.sh
+#   DOCKER_USER=yourname FLAVOR=l4-1-gpu MODELS="qwen3:8b granite4.1" ./deploy.sh
+#   DOCKER_USER=yourname BUILD_ONLY=1 ./deploy.sh      # build + push, don't start
 #
 set -euo pipefail
 
-REGISTRY="${REGISTRY:?set REGISTRY to your shared registry address (ovhai registry list)}"
-IMAGE="${IMAGE:-llm-chat}"
+DOCKER_USER="${DOCKER_USER:?set DOCKER_USER to your Docker Hub username}"
+IMAGE="${IMAGE:-ai-app}"
 TAG="${TAG:-latest}"
-APP_NAME="${APP_NAME:-llm-chat}"
-LABEL="${LABEL:-name=llm-chat}"
+REF="docker.io/$DOCKER_USER/$IMAGE:$TAG"
 
-MODEL="${MODEL:-Qwen/Qwen3-8B}"
+APP_NAME="${APP_NAME:-ai-app}"
+LABEL="${LABEL:-name=ai-app}"
 FLAVOR="${FLAVOR:-l4-1-gpu}"
 GPUS="${GPUS:-1}"
-MAX_MODEL_LEN="${MAX_MODEL_LEN:-8192}"
-GPU_MEM_UTIL="${GPU_MEM_UTIL:-0.90}"
-HF_TOKEN="${HF_TOKEN:-}"
-# Any request to /v1 must carry this as a bearer token. Generated if unset —
-# the UI asks for it under "settings", llm-chat takes --api-key.
-VLLM_API_KEY="${VLLM_API_KEY:-$(head -c 18 /dev/urandom | base64 | tr -d '/+=' )}"
+MODELS="${MODELS:-qwen3:8b}"
 
-# Optional: persist the HF cache in object storage so restarts skip the download.
+INSTALL_BOB="${INSTALL_BOB:-1}"
+INSTALL_CLAUDE="${INSTALL_CLAUDE:-1}"
+BUILD_ONLY="${BUILD_ONLY:-0}"
+
+# Generated unless you pass them. The API key gates /v1 and ComfyUI; the
+# terminal password gates the browser shell, which is a root shell in the
+# container — without it the terminal stays off.
+APP_API_KEY="${APP_API_KEY:-$(head -c 18 /dev/urandom | base64 | tr -d '/+=')}"
+TERMINAL_PASSWORD="${TERMINAL_PASSWORD:-$(head -c 12 /dev/urandom | base64 | tr -d '/+=')}"
+
+# Persist models, ComfyUI output and the agents' logins across restarts.
 # Format: container@alias/prefix:mount_path:permission:cache
 VOLUME="${VOLUME:-}"
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
-BUILD_CONTEXT="$(dirname "$SCRIPT_DIR")"     # gpu-vm/, so web/index.html is in context
-REF="$REGISTRY/$IMAGE:$TAG"
+BUILD_CONTEXT="$(dirname "$SCRIPT_DIR")"
 
 log() { printf '\033[38;5;42m==>\033[0m %s\n' "$*"; }
 
-command -v ovhai  >/dev/null || { echo "ovhai CLI not found: https://cli.gra.ai.cloud.ovh.net/" >&2; exit 1; }
 command -v docker >/dev/null || { echo "docker not found" >&2; exit 1; }
 
-log "building $REF"
-docker build --platform linux/amd64 -f "$SCRIPT_DIR/Dockerfile" -t "$REF" "$BUILD_CONTEXT"
+log "building $REF (linux/amd64, as OVH requires)"
+docker build --platform linux/amd64 \
+  --build-arg INSTALL_BOB="$INSTALL_BOB" \
+  --build-arg INSTALL_CLAUDE="$INSTALL_CLAUDE" \
+  -f "$SCRIPT_DIR/Dockerfile" -t "$REF" "$BUILD_CONTEXT"
 
-log "pushing to the shared registry"
+log "pushing to Docker Hub"
 docker push "$REF"
 
-# A running app with the same name keeps billing while a second one starts.
+if [[ "$BUILD_ONLY" == "1" ]]; then
+  log "built and pushed — skipping the app start (BUILD_ONLY=1)"
+  echo "  image: $REF"
+  exit 0
+fi
+
+command -v ovhai >/dev/null || { echo "ovhai CLI not found: https://cli.gra.ai.cloud.ovh.net/" >&2; exit 1; }
+
+# A previous app keeps billing while a new one starts.
 existing="$(ovhai app list --label "$LABEL" -o json 2>/dev/null \
-            | python3 -c 'import json,sys; d=json.load(sys.stdin); print(" ".join(a["id"] for a in d))' 2>/dev/null || true)"
+            | python3 -c 'import json,sys; print(" ".join(a["id"] for a in json.load(sys.stdin)))' 2>/dev/null || true)"
 if [[ -n "${existing// }" ]]; then
   log "stopping previous app(s): $existing"
   for id in $existing; do ovhai app stop "$id" >/dev/null || true; done
 fi
 
-log "starting app on $FLAVOR (billed per minute while it runs)"
+log "starting $APP_NAME on $FLAVOR — billed per minute from here"
 args=(
   app run "$REF"
   --name "$APP_NAME"
@@ -67,32 +82,37 @@ args=(
   --gpu "$GPUS"
   --label "$LABEL"
   --default-http-port 8080
-  --probe-path /health
-  --env MODEL="$MODEL"
-  --env MAX_MODEL_LEN="$MAX_MODEL_LEN"
-  --env GPU_MEM_UTIL="$GPU_MEM_UTIL"
-  --env VLLM_API_KEY="$VLLM_API_KEY"
+  --probe-path /healthz
+  --env APP_API_KEY="$APP_API_KEY"
+  --env TERMINAL_PASSWORD="$TERMINAL_PASSWORD"
+  --env OLLAMA_MODELS_PRELOAD="$MODELS"
 )
-[[ -n "$HF_TOKEN" ]] && args+=(--env HF_TOKEN="$HF_TOKEN")
-[[ -n "$VOLUME"   ]] && args+=(--volume "$VOLUME")
+[[ -n "$VOLUME" ]] && args+=(--volume "$VOLUME")
 
 ovhai "${args[@]}"
 
 cat <<EOF
 
   ─────────────────────────────────────────────────────────────────
-  app       $APP_NAME  ($MODEL on $FLAVOR)
-  api key   $VLLM_API_KEY
-            (paste into the UI's settings panel, or export LLM_API_KEY)
+  image     $REF
+  app       $APP_NAME on $FLAVOR, models: $MODELS
 
-  url       ovhai app list --label $LABEL      # shows https://<id>.app.<region>.ai.cloud.ovh.net
-  logs      ovhai app logs <app-id> -f
-  stop      ovhai app stop <app-id>            # this is what stops the billing
+  api key   $APP_API_KEY
+  terminal  user "dev", password $TERMINAL_PASSWORD
 
-  The app bills per minute for as long as it runs — nothing stops it on its
-  own. Start the guard so it can't quietly eat the trial credit:
+  Once it reports RUNNING (ovhai app list --label $LABEL):
 
-      ./ovhai-guard.sh install <app-id>
+    https://<app>.app.<region>.ai.cloud.ovh.net/              chat UI
+    https://<app>.app.<region>.ai.cloud.ovh.net/comfy         ComfyUI
+    https://<app>.app.<region>.ai.cloud.ovh.net/term?key=...  terminal
+    https://<app>.app.<region>.ai.cloud.ovh.net/healthz       status
+
+  In the terminal, log the agents in with your own accounts:
+    claude          then /login  — uses your Claude Pro subscription
+    bob             then follow its IBM login prompt
+
+  Nothing stops the app on its own. Arm the guard:
+    ./ovhai-guard.sh install <app-id>
   ─────────────────────────────────────────────────────────────────
 
 EOF

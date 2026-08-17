@@ -1,85 +1,139 @@
-# GPU + Hugging Face chat setup
+# GPU AI app: Ollama + ComfyUI + terminal agents
 
-Two ways to run an open-weights model on OVHcloud with a browser chat UI and a
-terminal client. Same model server (vLLM, OpenAI-compatible API), same UI, same
-two cost guards: **stop after 50 hours** and **stop after 1 hour idle**.
+A container that runs an open-weights model, image generation, and two terminal
+coding agents on an OVHcloud GPU — plus the same setup as a plain Debian VM if
+you ever get instance quota.
 
-| | AI Deploy | GPU VM (Debian) |
+Both paths carry the same two cost guards: **stop after 50 hours** and **stop
+after 1 hour idle**.
+
+| | AI Deploy container | GPU VM (Debian) |
 | --- | --- | --- |
-| What it is | a container OVH runs for you | an instance you own root on |
+| What it is | one image OVH runs for you | an instance you own root on |
 | Billing | per minute while the app runs | per hour while the instance exists |
-| Quota needed | AI Deploy GPU quota | Public Cloud vCPU/**RAM** quota |
-| Guard | `ovhai app stop` from a cron on your machine | `poweroff` from a timer on the VM |
-| Use it when | you have AI Deploy credit — start here | you want SSH, persistence, other services |
+| Quota | AI Deploy GPU quota | Public Cloud vCPU/**RAM** quota |
+| Guard | `ovhai app stop` from cron | `poweroff` from a timer on the VM |
+| Start here if | you have AI Deploy credit | you need SSH and persistence |
 
 ---
 
-## A. AI Deploy
+## A. The container
 
-Billed per minute of running app, so the discipline is: start it, use it, stop it.
+One image, one public port, everything inside it:
 
-```bash
-ovhai login
-ovhai registry list                 # copy the shared registry address
-docker login <registry-address>     # credentials from that same output
+| | | |
+| --- | --- | --- |
+| **Ollama** | `127.0.0.1:11434` | model inference, OpenAI-compatible |
+| **ComfyUI** | `127.0.0.1:8188` | image generation |
+| **ttyd** | `127.0.0.1:7681` | browser terminal — where `claude` and `bob` live |
+| **router** | `0.0.0.0:8080` | the single public port |
 
-cd gpu-vm
-REGISTRY=<registry-address> HF_TOKEN=hf_xxx MODEL=Qwen/Qwen3-8B FLAVOR=l4-1-gpu \
-  ./aideploy/deploy.sh
-```
-
-`deploy.sh` builds [`aideploy/Dockerfile`](aideploy/Dockerfile), pushes it, and
-starts the app. It prints an API key and the app URL — open the URL for the chat
-UI, paste the key into **settings**.
-
-The container ([`aideploy/serve.py`](aideploy/serve.py)) runs vLLM on loopback and
-fronts it with one public port, because AI Deploy exposes exactly one:
+AI Deploy gives an app exactly one HTTP port and forbids docker-compose, so
+[`entrypoint.py`](aideploy/entrypoint.py) supervises all four processes and
+[`router.py`](aideploy/router.py) fans requests out:
 
 ```text
-GET /          chat UI
-    /v1/...    OpenAI-compatible API (bearer token = the printed key)
-    /health    readiness — 200 once weights are loaded
-    /metrics   vLLM Prometheus counters (the guard reads these)
+GET /                chat UI
+    /comfy           ComfyUI
+    /term            browser terminal (ttyd)
+    /v1/...          OpenAI-compatible API — point any client at it
+    /ollama/...      Ollama's native API
+    /healthz         status + idle seconds (what the guard reads)
+    everything else  ComfyUI
 ```
 
-The image runs as UID `42420` with `/workspace` as its home, which is what AI
-Deploy requires — don't change that or the HF download fails on a read-only home.
+That last line is the load-bearing one. ComfyUI's frontend requests absolute
+paths (`/api/...`, `/view`, `/assets/...`, `/ws`) and
+[does not support running under a path prefix](https://github.com/Comfy-Org/ComfyUI/issues/14455) —
+proxying it at `/comfy/` alone breaks thumbnails and much of its API. Reserving
+only the routes above and letting everything else fall through to ComfyUI means
+those absolute paths land where they should.
 
-**Arm the guard.** Nothing stops an AI Deploy app on its own:
+### Build and deploy
+
+```bash
+docker login                  # Docker Hub
+ovhai login                   # OVHcloud AI CLI
+
+cd gpu-vm
+DOCKER_USER=yourname MODELS="qwen3:8b" ./aideploy/deploy.sh
+```
+
+`deploy.sh` builds for `linux/amd64`, pushes to Docker Hub, and starts the app.
+It prints an API key and a terminal password — both generated unless you pass
+`APP_API_KEY` / `TERMINAL_PASSWORD`.
+
+If your Docker Hub repo is **private**, add it to AI Deploy as an authorised
+registry first, or OVH cannot pull it. Public repos need nothing.
+
+`BUILD_ONLY=1` builds and pushes without starting an app, which is what you want
+if you just wanted the image in the store.
+
+### The agents
+
+Both authenticate at runtime, in the terminal. **No credential is baked into the
+image** — that's why they're not configured at build time:
+
+```bash
+# open https://<app>.../term?key=<api key>, log in as dev / <terminal password>
+claude          # then /login — uses your Claude Pro subscription
+bob             # then follow the IBM login prompt
+```
+
+Worth being precise about the Pro question: **a Claude Pro subscription covers
+the Claude Code CLI, not raw API access.** So Claude is available as the terminal
+agent, and is deliberately *not* wired into the web chat UI as a model provider —
+that path calls the Anthropic API and needs separate API credits. The chat UI
+talks to your local Ollama models only.
+
+IBM Bob installs from IBM's public installer (`bob.ibm.com/download/bobshell.sh`,
+Node 22+) but is an entitled product, so signing in needs your IBM account. Build
+with `INSTALL_BOB=0` to leave it out, `INSTALL_CLAUDE=0` likewise.
+
+### Keeping state
+
+The container is ephemeral: without a volume, every restart re-pulls models and
+loses agent logins. Mount object storage to keep them:
+
+```bash
+VOLUME="my-container@GRA/workspace:/workspace:rw:cache" \
+  DOCKER_USER=yourname ./aideploy/deploy.sh
+```
+
+`/workspace` holds the Ollama models, ComfyUI output, and `~/.claude` / `~/.bob`.
+
+### Arm the guard
+
+Nothing stops an AI Deploy app on its own, and it bills per minute:
 
 ```bash
 ./aideploy/ovhai-guard.sh install <app-id>     # cron, every 2 min
 ./aideploy/ovhai-guard.sh status  <app-id>
 ```
 
-It stops the app after 50h of accumulated runtime or 60 min with no completed
-inference request (from `vllm:request_success_total` and the queue depth — a long
-generation counts as busy, an open browser tab doesn't). Both are env-tunable:
-`MAX_RUNTIME_HOURS=24 IDLE_MINUTES=30 ./aideploy/ovhai-guard.sh install <app-id>`.
+It calls `ovhai app stop` after 50h of accumulated runtime or 60 min with no
+request. Idleness comes from the container's own `/healthz`, which reports 0
+while anything is still streaming — so a long generation or an open ComfyUI job
+counts as busy, and a parked browser tab does not. Tune with
+`MAX_RUNTIME_HOURS=24 IDLE_MINUTES=30`.
 
-Caveat worth knowing: the cron only runs while your machine is awake. If you close
-the laptop with the app running, nothing stops it. For an unattended budget, put
-the guard on any always-on box.
+The cron only runs while your machine is awake. For an unattended budget, put the
+guard on any always-on box.
 
-**Weights re-download on every start** unless you mount object storage for the
-cache:
+### Security
 
-```bash
-VOLUME="my-container@GRA/hf-cache:/workspace/hf-cache:rw:cache" ./aideploy/deploy.sh
-```
-
-**Budget.** At the time of writing, roughly: a single-L4 flavor runs on the order
-of ~€1/h and a single-H100 several times that — check
-[the AI pricing page](https://www.ovhcloud.com/en/public-cloud/prices/) for the
-current rate, then `credit ÷ rate = hours`. A €270 trial credit is comfortable for
-50h on an L4-class flavor and tight on H100. The 50h cap exists so a forgotten app
-can't quietly drain it; lower it with `MAX_RUNTIME_HOURS` if the flavor is pricier.
+- `APP_API_KEY` gates `/v1`, `/ollama`, `/comfy` and `/term`. Browser navigations
+  can't send a header, so the router also accepts `?key=` or an `app_key` cookie;
+  the chat UI sets both once you paste the key into its settings panel.
+- The terminal is a **root shell in the container**. It stays off entirely unless
+  `TERMINAL_PASSWORD` is set, and ttyd requires basic auth on top of the app key.
+- The app URL is reachable from the internet. Don't run it without a key.
 
 ---
 
 ## B. GPU VM on Debian
 
-One script, run as root on a fresh Debian 12 or 13 GPU instance:
+One script, as root on a fresh Debian 12 or 13 GPU instance:
 
 ```bash
 git clone https://github.com/yaluft/3JSxWin && cd 3JSxWin/gpu-vm
@@ -87,82 +141,70 @@ sudo HF_TOKEN=hf_xxx ./setup-debian-gpu.sh --model Qwen/Qwen3-8B
 ```
 
 It installs the NVIDIA driver, then **tells you to reboot and re-run the same
-command** — the second pass does the rest and starts everything:
+command** — the second pass does the rest:
 
 - `vllm.service` — model server on `127.0.0.1:8000`
-- `nginx` on `:8080` — UI at `/`, API proxied at `/v1` (SSE buffering off)
-- `llm-chat` — terminal client, stdlib-only, works with the system python
+- `nginx` on `:8080` — UI at `/`, API proxied at `/v1`
+- `llm-chat` — terminal client, stdlib-only
 - `llm-lifeguard.timer` — the auto-shutdown, every minute
-- `ufw` — SSH plus the web port, nothing else
+- `ufw` — SSH plus the web port
 
-Debian 13 (trixie) is handled: NVIDIA publishes a `debian13` CUDA repo and current
-vLLM ships abi3 wheels that run on python 3.13. If a dependency ever has no wheel
-for the system interpreter, the script rebuilds the venv on a uv-managed 3.12 and
-carries on.
-
-Useful flags: `--skip-driver` (image already has CUDA), `--max-model-len`,
-`--tensor-parallel`, `--web-port`, `--max-hours`, `--idle-minutes`,
-`--no-idle-shutdown`. Set `CHAT_USER` and `CHAT_PASSWORD` to put basic auth on the
-web port — without them, anything that can reach `:8080` can use the model.
-
-### Day-to-day
+Debian 13 is handled: NVIDIA publishes a `debian13` CUDA repo and current vLLM
+ships abi3 wheels that run on python 3.13. If a dependency ever lacks a wheel for
+the system interpreter, the script rebuilds the venv on a uv-managed 3.12.
 
 ```bash
-llm-chat                       # interactive; /system /model /retry /save /quit
-llm-chat "explain this trace"  # one-shot
-journalctl -u vllm -f          # or: llm-vm logs -f
-
 llm-vm status                  # services, GPU, time left before shutdown
 llm-vm hold 2h                 # suppress the idle shutdown while you work
 llm-vm extend 4h               # push the 50h cap out
-llm-vm idle off | idle 30m     # change or disable idle shutdown
-llm-vm cap 24h | cap off       # change or disable the hard cap
+llm-vm idle off | idle 30m
+llm-vm cap 24h | cap off
 llm-vm model mistralai/Mistral-7B-Instruct-v0.3
-llm-vm off                     # stop now
 ```
 
-### How the shutdown decides
+`llm-lifeguard` treats the box as active on a manual hold, a logged-in session, a
+running `llm-chat`, an HTTP request in the last minute, or GPU use above 5%. The
+50h cap counts from `/var/lib/llm-vm/provisioned-at`, so the driver reboot
+doesn't hand you a fresh allowance.
 
-`llm-lifeguard` runs every minute and treats the box as **active** if any of:
-a manual hold, a logged-in SSH/tty session, a running `llm-chat`, an HTTP request
-through nginx in the last minute, or GPU utilization above 5%. Otherwise the idle
-clock runs, with a `wall` warning 5 minutes out.
-
-The 50h cap counts from `/var/lib/llm-vm/provisioned-at`, written on the first
-setup run — the driver reboot doesn't hand you a fresh allowance. Config lives in
-`/etc/llm-vm/lifeguard.env`.
-
-> **OVH keeps billing a stopped Public Cloud instance.** Powering off protects you
-> from a runaway GPU-hour bill only if the flavor's cost is in the compute; to stop
-> the meter completely you must delete the instance. Point `SHUTDOWN_HOOK` in
-> `lifeguard.env` at a script that calls the OVH API to delete it, and set
-> `SHUTDOWN_ACTION=hook`.
+> **OVH keeps billing a stopped Public Cloud instance.** To stop the meter you
+> must delete it. Point `SHUTDOWN_HOOK` in `/etc/llm-vm/lifeguard.env` at a script
+> that calls the OVH API, and set `SHUTDOWN_ACTION=hook`.
 
 ---
 
 ## The `ram quota 44000 reached` error
 
-That's a Public Cloud **project quota**, not a capacity or billing problem: the
-project is capped at 44000 MB of instance RAM in that region, and every OVH GPU
-flavor asks for more than that — the smallest V100 flavors (`t1-45`, `t2-45`) are
-45 GB, L4 is 90 GB, A100 is 180 GB, H100 is 380 GB. So no GPU instance fits under
-a 44 GB cap, and picking a smaller GPU won't get around it.
+A Public Cloud **project quota**, not a capacity or billing problem: the project
+is capped at 44000 MB of instance RAM in that region, and every OVH GPU flavor
+asks for more — the smallest V100 flavors (`t1-45`, `t2-45`) are 45 GB, L4 is
+90 GB, A100 180 GB, H100 380 GB. No GPU instance fits under a 44 GB cap, so
+picking a smaller GPU won't help.
 
-1. **Control Panel → Public Cloud → project → Settings → Quota & Regions**, check
-   the region you're deploying to (quotas are per region), and free RAM by deleting
-   instances you no longer need — a *stopped* instance still counts against quota.
+1. **Control Panel → Public Cloud → project → Settings → Quota & Regions.**
+   Quotas are per region. A *stopped* instance still counts against quota.
 2. Hit **"Increase your quota!"** there. Manual increases are validated against
-   prepaid Public Cloud credit; if the button isn't offered, it routes you to a
-   support ticket, which is handled by hand and can take a while.
-3. Auto-scaling quota exists but only reacts after 30 days above 60% usage — no
-   help today.
+   prepaid credit; if the button isn't offered it routes to a support ticket,
+   handled by hand.
+3. Auto-scaling quota only reacts after 30 days above 60% usage — no help today.
 
-If you're going the AI Deploy route instead, this quota is irrelevant: AI Deploy
-has its own GPU quota and doesn't consume instance RAM.
+None of this applies to AI Deploy, which has its own GPU quota and consumes no
+instance RAM.
+
+## OVH image requirements
+
+The Dockerfile is built to satisfy these, and `deploy.sh` builds accordingly:
+
+- **`linux/amd64` only** — `docker build --platform linux/amd64`.
+- **No docker-compose** — one image, one entrypoint supervising the processes.
+- **Runs as UID 42420:42420** — `/workspace`, `/opt/app` and `/opt/ComfyUI` are
+  chowned to it, and `HOME=/workspace`.
+- **Private registries must be authorised** in AI Deploy before OVH can pull.
 
 ## Sources
 
-- [Increasing Public Cloud quotas](https://docs.ovhcloud.com/en/guides/public-cloud/cross-functional/increasing-public-cloud-quota)
 - [AI Deploy — getting started](https://docs.ovhcloud.com/en/guides/public-cloud/ai-machine-learning/ai-deploy-getting-started)
-- [Serving LLMs with vLLM and AI Deploy](https://blog.ovhcloud.com/en/posts/how-to-serve-llms-with-vllm-and-ovhcloud-ai-deploy/)
 - [AI Deploy billing and lifecycle](https://help.ovhcloud.com/csm/en-public-cloud-ai-deploy-billing?id=kb_article_view&sysparm_article=KB0057059)
+- [Increasing Public Cloud quotas](https://docs.ovhcloud.com/en/guides/public-cloud/cross-functional/increasing-public-cloud-quota)
+- [IBM Bob — install and setup](https://bob.ibm.com/docs/shell/getting-started/install-and-setup)
+- [Claude Code — programmatic use](https://code.claude.com/docs/en/headless)
