@@ -5,7 +5,7 @@
 // you are actually doing.
 
 import * as THREE from 'three';
-import { loadConfig } from './config.js?v=11';
+import { loadConfig } from './config.js?v=12';
 import { createMotes } from './motes.js?v=6';
 import { createHud } from './hud.js?v=6';
 import { tellHost, onHostMessage, reportError } from './host.js?v=6';
@@ -88,6 +88,20 @@ async function boot() {
   let themeMod = await loadTheme(config.scene);
   vibe?.setThemeModule?.(themeMod);
   sky = createScene(config.scene, config, themeMod);
+  let flyers = null;
+
+  async function syncFlyers() {
+    flyers?.dispose?.();
+    flyers = null;
+    const on = Boolean(config.scenes?.[config.scene]?.geeked);
+    if (!on || !themeMod?.createOverlay) return;
+    try {
+      flyers = await themeMod.createOverlay(THREE, config);
+    } catch (error) {
+      console.warn('geeked overlay failed', error);
+    }
+  }
+  await syncFlyers();
   const motes = motesOn ? createMotes(config) : null;
   const hud = createHud(config);
   const rack = hosted || embedded ? null : mountRack();
@@ -174,6 +188,7 @@ async function boot() {
     vibe?.setThemeModule?.(themeMod);
     vibe?.setScene?.(next);
     sky = createScene(next, config, themeMod);
+    await syncFlyers();
     applyRung(rung, { force: true });
     resize();
     paintRack();
@@ -202,6 +217,7 @@ async function boot() {
     }
     const palBefore = config.paletteName;
     const audioWasOff = config.audio?.enabled === false;
+    const geekedBefore = Boolean(config.scenes?.[config.scene]?.geeked);
     Object.assign(config, next);
     if (next.palette) config.palette = next.palette;
 
@@ -215,6 +231,7 @@ async function boot() {
 
     if (next.scenes) applySceneTune(config.scene);
     sky?.apply(config);
+    if (Boolean(config.scenes?.[config.scene]?.geeked) !== geekedBefore) void syncFlyers();
 
     motes?.apply(config);
     paintRack();
@@ -391,7 +408,8 @@ async function boot() {
   function frame(now) {
     handle = requestAnimationFrame(frame);
     if (now - lastDraw < frameBudget - 1) return;
-    elapsed += Math.min((now - lastTick) / 1000, 0.1);
+    const dt = Math.min((now - lastTick) / 1000, 0.1);
+    elapsed += dt;
     lastTick = now;
     lastDraw = now;
 
@@ -399,12 +417,17 @@ async function boot() {
     if (sky) {
       sky.update(elapsed);
       motes?.update(elapsed);
+      flyers?.update?.(elapsed, dt);
       sky.prerender?.(renderer);
       const drawMotes = motes && CORE_HAS_MOTES(config.scene);
-      if (drawMotes) {
+      if (drawMotes || flyers) {
+        const prevClear = renderer.autoClear;
+        renderer.autoClear = false;
         renderer.clear();
         renderer.render(sky.scene, sky.camera);
-        renderer.render(motes.scene, motes.camera);
+        if (drawMotes) renderer.render(motes.scene, motes.camera);
+        if (flyers) renderer.render(flyers.scene, flyers.camera);
+        renderer.autoClear = prevClear;
       } else {
         renderer.render(sky.scene, sky.camera);
       }

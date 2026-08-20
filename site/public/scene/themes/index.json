@@ -15,6 +15,7 @@
     { "id": "nimbus", "label": "Nimbus", "blurb": "A world lost in slow cloud belts", "family": "world" },
     { "id": "shoal", "label": "Shoal", "blurb": "Tropical shallows and sandbars under a hard noon sun", "family": "world" },
     { "id": "caldera", "label": "Caldera", "blurb": "A volcanic isle — crater glow over dark water", "family": "world" },
-    { "id": "bayline", "label": "Bayline", "blurb": "Voxel Tokyo — 3D pixel towers, Rainbow Bridge, windows ticking", "family": "world" }
+    { "id": "bayline", "label": "Bayline", "blurb": "Voxel Tokyo — 3D pixel towers, Rainbow Bridge, windows ticking", "family": "world" },
+    { "id": "deep-field", "label": "Deep Field", "blurb": "Nebula, debris, meteor storms and bodies too large to name", "family": "world" }
   ]
 }

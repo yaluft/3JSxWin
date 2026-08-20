@@ -87,6 +87,7 @@ const CONTROLS = [
   { group: 'tune', key: 'speed', label: 'speed', min: 0, max: 0.3, step: 0.001 },
   { group: 'tune', key: 'height', label: 'height', min: 0.05, max: 1.2, step: 0.01 },
   { group: 'tune', key: 'volume', label: 'volume', min: 0, max: 1, step: 0.01 },
+  { group: 'tune', key: 'geeked', label: 'geeked', type: 'toggle' },
 
   { section: 'host' },
   { type: 'actions', buttons: HOST_ACTIONS },

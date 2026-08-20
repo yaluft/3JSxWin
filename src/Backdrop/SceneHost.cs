@@ -397,7 +397,20 @@ internal sealed class SceneHost : IDisposable
 
     internal void ReloadScene()
     {
-        foreach (var window in _windows) window.ReloadScene();
+        var dispatcher = Application.Current?.Dispatcher;
+        if (dispatcher is not null && !dispatcher.CheckAccess())
+        {
+            dispatcher.BeginInvoke(ReloadScene);
+            return;
+        }
+
+        var windows = _windows.ToArray();
+        if (windows.Length == 0) return;
+        bool any = false;
+        foreach (var window in windows) any |= window.TryReloadScene();
+        if (any) return;
+        Log.Write("Reload failed; rebuilding windows.");
+        RebuildWindows();
     }
 
     internal void OpenDevTools() => _windows.FirstOrDefault()?.OpenDevTools();

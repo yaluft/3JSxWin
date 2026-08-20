@@ -3,6 +3,7 @@
 // Uses system Chrome over CDP — no npm install.
 //
 //   node tools/capture-themes.mjs
+//   node tools/capture-themes.mjs deep-field
 
 import { spawn } from 'node:child_process';
 import { createServer } from 'node:http';
@@ -15,10 +16,13 @@ const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const WEB = join(ROOT, 'src', 'Backdrop', 'web');
 const CONFIG = join(WEB, 'config.json');
 const OUT = join(ROOT, 'docs', 'themes');
-const THEMES = [
+const DEFAULT_THEMES = [
   'mycelight', 'mothwork', 'coralnet', 'lungclock',
   'inkatrium', 'foldwell', 'sporehall', 'orreryheart', 'threadloom',
+  'deep-field',
 ];
+const THEMES = process.argv.slice(2).filter(Boolean);
+const IDS = THEMES.length ? THEMES : DEFAULT_THEMES;
 const VIEWPORT = { width: 1280, height: 720 };
 const WAIT_MS = 4500;
 const MIME = {
@@ -227,12 +231,12 @@ async function main() {
   const { port } = server.address();
   let launched;
   try {
-    setInstalled(THEMES);
+    setInstalled(IDS);
     launched = launchChrome(exe);
     const wsUrl = await launched.wsUrl;
     const { browser, page } = await connectPage(wsUrl);
     try {
-      for (const id of THEMES) {
+      for (const id of IDS) {
         const dest = join(OUT, `${id}.png`);
         await capture(page, `http://127.0.0.1:${port}/?scene=${id}`, dest);
         console.log(`wrote ${dest}`);

@@ -30,7 +30,7 @@ The renderer is a vendored three.js scene (r185, offline). Tune it live with `Ct
 ## Features
 
 - Nine core scenes always loaded: Aurora, Tube Dunes, Starwell, Tube Warp, Ion, Tube Loops, Ember, Kelp, Murmur
-- Optional library under `web/themes/` (Mycelight, Mothwork, Coralnet, Lungclock, Inkatrium, Foldwell, Sporehall, Orreryheart, Threadloom) — files ship, shaders load only after you install them in the console
+- Optional library under `web/themes/` (Mycelight, Mothwork, Coralnet, Lungclock, Inkatrium, Foldwell, Sporehall, Orreryheart, Threadloom, **Deep Field**) — files ship, shaders load only after you install them in the console. Preview v2: Deep Field (nebula, debris, meteor storms).
 - Generated soundscapes (no files); optional themes bring their own graph
 - ASCII scenes use a 32-glyph density ramp, palette-tinted ink, and a 480-column cap
 - Palette randomizer using real Neovim themes (Catppuccin, Tokyo Night, Rosé Pine, Kanagawa, …)

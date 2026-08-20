@@ -66,6 +66,12 @@ export async function loadConfig() {
   const scene = query.get('scene');
   if (scene) config.scene = scene;
 
+  const geeked = query.get('geeked');
+  if (geeked === '1' || geeked === 'true') {
+    (config.scenes ??= {})[config.scene] ??= {};
+    config.scenes[config.scene].geeked = true;
+  }
+
   const paletteName = query.get('palette');
   if (paletteName) config.paletteName = paletteName;
 

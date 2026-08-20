@@ -402,7 +402,27 @@ public partial class MainWindow : Window
         if (!IsWindowedMode) ApplyBounds();
     }
 
-    internal void ReloadScene() => Web.CoreWebView2?.Reload();
+    /// <summary>
+    /// Reloads the page. Accessing CoreWebView2 after Dispose throws rather than
+    /// returning null, so this must catch — the tray click runs on the WinForms
+    /// thread and an unhandled throw becomes the JIT dialog.
+    /// </summary>
+    /// <returns>True if Reload was issued.</returns>
+    internal bool TryReloadScene()
+    {
+        if (_webReleased) return false;
+        try
+        {
+            if (Web.CoreWebView2 is not { } core) return false;
+            core.Reload();
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Log.Write("Reload skipped; WebView2 not ready", ex);
+            return false;
+        }
+    }
 
     internal void OpenDevTools()
     {

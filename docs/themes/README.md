@@ -27,3 +27,4 @@ Optional (ship in `web/themes/`, load after install):
 | sporehall | Sporehall | [sporehall.png](sporehall.png) |
 | orreryheart | Orreryheart | [orreryheart.png](orreryheart.png) |
 | threadloom | Threadloom | [threadloom.png](threadloom.png) |
+| deep-field | Deep Field | [deep-field.png](deep-field.png) |
