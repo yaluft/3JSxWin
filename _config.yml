@@ -25,7 +25,10 @@ exclude:
   - "*.ps1"
   - Win11Backdrop.sln
   - "Recording*.mp4"
-  - "*.gif"
+  # Keep the large root demo GIFs out of the build, but let docs assets
+  # (e.g. assets/video/preview.gif) publish.
+  - gif.gif
+  - v1.0.0.gif
   - Gemfile
   - Gemfile.lock
   - node_modules/
