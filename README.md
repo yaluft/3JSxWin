@@ -19,7 +19,7 @@ A live [three.js](https://threejs.org) scene as a Windows 11 wallpaper. It sits 
 
 **Site:** [yakupov.xyz](https://yakupov.xyz/) · **Scenes:** [yakupov.xyz/scene](https://yakupov.xyz/scene/) · **Install:** [yakupov.xyz/install](https://yakupov.xyz/install)
 
-`]` cycles scenes · `P` shuffles a Neovim palette · the name of the scene and palette flashes on each switch
+`Win` is the leader key `[ or ]` cycles scenes · `P` shuffles a Neovim palette · the name of the scene and palette flashes on each switch
 
 ## Why
 
