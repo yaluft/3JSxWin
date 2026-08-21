@@ -1,7 +1,7 @@
 # 3JSxWin
 
 <p align="center">
-  <img src="v2.0.gif" alt="yakupov.xyz website preview with live aurora" width="720" />
+  <img src="v2.0.gif" alt="Preview v2: Deep Field on the Windows 11 desktop" width="720" />
 </p>
 
 <p align="center">
@@ -23,7 +23,7 @@ A live [three.js](https://threejs.org) scene as a Windows 11 wallpaper. It sits 
 
 ## Why
 
-Most live wallpapers sit *on top* of the desktop or replace Explorer. This one attaches to the same hidden Worker window Explorer uses for wallpaper, so icons stay clickable and the taskbar stays on top.
+Most live wallpapers sit _on top_ of the desktop or replace Explorer. This one attaches to the same hidden Worker window Explorer uses for wallpaper, so icons stay clickable and the taskbar stays on top.
 
 The renderer is a vendored three.js scene (r185, offline). Tune it live with `Ctrl+Alt+B`.
 
@@ -73,15 +73,15 @@ Keep the tree off OneDrive and out of paths with spaces.
 
 The window disappears in desktop mode. A tray icon is the way back:
 
-| Action | What it does |
-| --- | --- |
-| Show in a window | Pull the scene off the desktop |
-| Desktop layout | Single, span all, or duplicate on every monitor |
-| Reload scene | Re-read `dist\web\config.json` |
-| Open scene folder | Jump to `dist\web\` |
-| Open DevTools | Needs `--devtools` on the command line |
-| Open log | `%LOCALAPPDATA%\Backdrop\backdrop.log` |
-| Quit Backdrop | Exit |
+| Action            | What it does                                    |
+| ----------------- | ----------------------------------------------- |
+| Show in a window  | Pull the scene off the desktop                  |
+| Desktop layout    | Single, span all, or duplicate on every monitor |
+| Reload scene      | Re-read `dist\web\config.json`                  |
+| Open scene folder | Jump to `dist\web\`                             |
+| Open DevTools     | Needs `--devtools` on the command line          |
+| Open log          | `%LOCALAPPDATA%\Backdrop\backdrop.log`          |
+| Quit Backdrop     | Exit                                            |
 
 Double-click the tray icon to toggle window and desktop mode.
 
@@ -115,18 +115,18 @@ The aurora is a full-screen shader quad; the motes are a GPU points field. Both 
 
 ## If it goes wrong
 
-| Symptom | What to do |
-| --- | --- |
-| Nothing happens | Read `%LOCALAPPDATA%\Backdrop\backdrop.log` |
-| "Already running" | It is in the notification overflow |
-| Running, but blank | Look for `Attached to WorkerW`. If not, `.\dist\Backdrop.exe --diagnose` |
-| Only one monitor | Tray → Desktop layout → Duplicate on all monitors |
-| Covers icons | Another wallpaper tool owns the layer — close Wallpaper Engine / Lively / Rainmeter |
-| Black after unplug / DPI change | It re-attaches in ~4s; otherwise **Reload scene** |
-| Old wallpaper after reboot | Expected until you run `.\install-startup.ps1` |
-| High GPU | `--fps 20 --scale 0.6`, or set those in `config.json` |
-| `dotnet` missing / NU1101 | SDK not on PATH, or nuget.org unreachable |
-| Flat colour, no aurora | Software WebGL fallback — `--devtools` and paste the shader error |
+| Symptom                         | What to do                                                                          |
+| ------------------------------- | ----------------------------------------------------------------------------------- |
+| Nothing happens                 | Read `%LOCALAPPDATA%\Backdrop\backdrop.log`                                         |
+| "Already running"               | It is in the notification overflow                                                  |
+| Running, but blank              | Look for `Attached to WorkerW`. If not, `.\dist\Backdrop.exe --diagnose`            |
+| Only one monitor                | Tray → Desktop layout → Duplicate on all monitors                                   |
+| Covers icons                    | Another wallpaper tool owns the layer — close Wallpaper Engine / Lively / Rainmeter |
+| Black after unplug / DPI change | It re-attaches in ~4s; otherwise **Reload scene**                                   |
+| Old wallpaper after reboot      | Expected until you run `.\install-startup.ps1`                                      |
+| High GPU                        | `--fps 20 --scale 0.6`, or set those in `config.json`                               |
+| `dotnet` missing / NU1101       | SDK not on PATH, or nuget.org unreachable                                           |
+| Flat colour, no aurora          | Software WebGL fallback — `--devtools` and paste the shader error                   |
 
 Desktop mode no longer falls back to a window. It retries silently. `Chosen layer : None` means Explorer is not running normally.
 
@@ -136,11 +136,11 @@ Full walkthrough: [INSTALL.md](INSTALL.md). Config reference: [docs/pages/config
 
 The landing page, installer, and a live browser preview of the scene are served from a Cloudflare Worker at [yakupov.xyz](https://yakupov.xyz/).
 
-| Path | Page |
-| --- | --- |
-| [yakupov.xyz](https://yakupov.xyz/) | Landing page |
-| [yakupov.xyz/scene](https://yakupov.xyz/scene/) | Live scene preview |
-| [yakupov.xyz/install](https://yakupov.xyz/install) | Install notes |
+| Path                                               | Page               |
+| -------------------------------------------------- | ------------------ |
+| [yakupov.xyz](https://yakupov.xyz/)                | Landing page       |
+| [yakupov.xyz/scene](https://yakupov.xyz/scene/)    | Live scene preview |
+| [yakupov.xyz/install](https://yakupov.xyz/install) | Install notes      |
 
 From `site/`:
 
