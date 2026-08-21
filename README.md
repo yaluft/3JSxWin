@@ -1,7 +1,7 @@
 # 3JSxWin
 
 <p align="center">
-  <img src="docs/site-preview.gif" alt="yakupov.xyz website preview with live aurora" width="720" />
+  <img src="v2.0.gif" alt="yakupov.xyz website preview with live aurora" width="720" />
 </p>
 
 <p align="center">
