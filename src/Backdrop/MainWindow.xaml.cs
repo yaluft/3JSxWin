@@ -63,6 +63,7 @@ public partial class MainWindow : Window
         if (IsWindowedMode)
         {
             ApplyWindowedChrome();
+            if (_options.ScreensaverRun) ApplyScreensaverChrome();
         }
         else
         {
@@ -185,7 +186,10 @@ public partial class MainWindow : Window
 
         // The scene folder is served over a reserved-by-RFC host name, so the page gets a
         // real origin (modules, fetch, and a secure context) without shipping a web server.
-        core.SetVirtualHostNameToFolderMapping(VirtualHost, _webRoot, CoreWebView2HostResourceAccessKind.DenyCors);
+        // Allow: ES module dynamic import() is a CORS fetch even on the same virtual
+        // host. DenyCors made optional themes fail to load, and createScene fell back
+        // to the Aurora sky while the UI still showed the theme name.
+        core.SetVirtualHostNameToFolderMapping(VirtualHost, _webRoot, CoreWebView2HostResourceAccessKind.Allow);
 
         // Nothing in this app should ever navigate away from the scene.
         core.NewWindowRequested += (_, args) => args.Handled = true;
@@ -196,7 +200,16 @@ public partial class MainWindow : Window
         };
 
         cancel.ThrowIfCancellationRequested();
-        core.Navigate($"https://{VirtualHost}/index.html{_options.ToQueryString()}");
+        if (_options.ScreensaverRun)
+        {
+            _ = core.AddScriptToExecuteOnDocumentCreatedAsync(
+                "document.addEventListener('pointerdown',function(){try{chrome.webview.postMessage({type:'exit'})}catch(e){}});"
+                + "document.addEventListener('keydown',function(){try{chrome.webview.postMessage({type:'exit'})}catch(e){}});");
+        }
+        string query = _options.ToQueryString();
+        string stamp = File.GetLastWriteTimeUtc(Path.Combine(_webRoot, "js", "main.js")).Ticks.ToString("x");
+        string join = string.IsNullOrEmpty(query) ? "?" : "&";
+        core.Navigate($"https://{VirtualHost}/index.html{query}{join}v={stamp}");
         Log.Write($"Scene served from {_webRoot}");
     }
 
@@ -228,6 +241,9 @@ public partial class MainWindow : Window
                 case "announce":
                     Log.Write($"Switch {doc.RootElement.GetProperty("scene").GetString()} · {doc.RootElement.GetProperty("palette").GetString()}");
                     break;
+                case "exit":
+                    if (_options.ScreensaverRun) Application.Current.Shutdown();
+                    break;
             }
         }
         catch (Exception ex)
@@ -258,6 +274,16 @@ public partial class MainWindow : Window
         _attempts++;
         _layer = DesktopLayer.Find();
         _attached = DesktopLayer.Attach(_hwnd, _layer, out string failure);
+
+        // If Explorer destroyed the WorkerW in the race between Find() and SetParent(),
+        // the OS returns ERROR_INVALID_WINDOW_HANDLE (1400). Re-find and retry once
+        // immediately rather than waiting for the slow retry timer — the new WorkerW is
+        // usually already live by the time we get here.
+        if (!_attached && failure.Contains("stale"))
+        {
+            _layer = DesktopLayer.Find();
+            _attached = DesktopLayer.Attach(_hwnd, _layer, out failure);
+        }
 
         if (_attached)
         {
@@ -351,6 +377,15 @@ public partial class MainWindow : Window
         WindowStyle = WindowStyle.SingleBorderWindow;
         ResizeMode = ResizeMode.CanResize;
         ShowInTaskbar = true;
+    }
+
+    private void ApplyScreensaverChrome()
+    {
+        WindowStyle = WindowStyle.None;
+        ResizeMode = ResizeMode.NoResize;
+        ShowInTaskbar = false;
+        Topmost = true;
+        WindowState = WindowState.Maximized;
     }
 
     private void CenterOnPrimary()

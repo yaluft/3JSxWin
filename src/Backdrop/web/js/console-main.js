@@ -6,7 +6,7 @@
 // Save/reset/close go to the host too.
 
 import { loadConfig } from './config.js';
-import { createPanel } from './panel.js';
+import { createPanel } from './panel.js?v=4';
 import { tellHost, reportError } from './host.js';
 import { loadCatalog, setInstalled } from './theme-catalog.js';
 

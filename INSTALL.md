@@ -107,6 +107,22 @@ Push `horizon.y` up to `0.5` for a wider sky, or `intensity` to `1.4` for someth
 much louder. Editing `src\Backdrop\web\config.json` instead makes the change survive
 the next build.
 
+## Personalization
+
+Windows Settings → Personalization → Background only offers Picture, Solid colour,
+Slideshow, and Windows Spotlight. There is **no public API** to add a fourth
+Background radio, so 3JSxWin does not appear there.
+
+What actually ships (registered on first launch, HKCU, no admin):
+
+- **Desktop context menu** — a 3JSxWin item near Personalize (set as background, preview window, settings).
+- **Theme** — `3JSxWin.theme` under `%LOCALAPPDATA%\Microsoft\Windows\Themes`, which can show up in Personalization → Themes. Applying it sets a matching dark solid; the live scene is still the running app on WorkerW.
+- **Protocol** — `3jsxwin:` (`3jsxwin://desktop`, `3jsxwin://window`, `3jsxwin://settings`).
+- **Screensaver** — can be set as *your* screensaver. It will not appear in the screensaver picker, which only lists `.scr` files in System32 (admin).
+- **Start with Windows** — same Startup-folder shortcut as `install-startup.ps1`, also from the settings panel and tray.
+- **Open Windows background settings** — launches `ms-settings:personalization-background`.
+- **Set as desktop background** — attaches to the existing WorkerW wallpaper layer.
+
 ---
 
 ## If it goes wrong

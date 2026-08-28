@@ -69,7 +69,7 @@ public partial class ConsoleWindow : Window
         // Opaque, dark. A transparent WebView2 inside an AllowsTransparency WPF window is
         // the classic airspace trap — the control goes non-interactive because an HWND-based
         // WebView2 can't composite into a layered window. Solid background keeps clicks live.
-        Web.DefaultBackgroundColor = System.Drawing.Color.FromArgb(255, 4, 6, 12);
+        Web.DefaultBackgroundColor = System.Drawing.Color.FromArgb(255, 32, 32, 32);
 
         var s = core.Settings;
         s.AreDefaultContextMenusEnabled = _devTools;
@@ -94,7 +94,7 @@ public partial class ConsoleWindow : Window
             }
         };
 
-        core.SetVirtualHostNameToFolderMapping(VirtualHost, _webRoot, CoreWebView2HostResourceAccessKind.DenyCors);
+        core.SetVirtualHostNameToFolderMapping(VirtualHost, _webRoot, CoreWebView2HostResourceAccessKind.Allow);
         core.NewWindowRequested += (_, args) => args.Handled = true;
         core.NavigationStarting += (_, args) =>
         {

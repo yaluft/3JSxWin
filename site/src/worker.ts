@@ -30,6 +30,9 @@ export default {
     } else if (url.pathname.endsWith(".zip")) {
       headers.set("Content-Type", "application/zip");
       headers.set("Content-Disposition", 'attachment; filename="3jsxwin-win-x64.zip"');
+    } else if (url.pathname.endsWith(".mp4") || url.pathname.endsWith(".gif") || url.pathname.endsWith(".webm")) {
+      headers.set("Cache-Control", "public, max-age=86400");
+      headers.set("Cross-Origin-Resource-Policy", "cross-origin");
     } else if (url.pathname.includes("/vendor/")) {
       headers.set("Cache-Control", "public, max-age=86400");
     } else if (url.pathname.endsWith(".js") || url.pathname.endsWith(".html") || url.pathname.endsWith(".json")) {

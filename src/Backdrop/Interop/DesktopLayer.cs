@@ -92,6 +92,13 @@ internal static class DesktopLayer
         return IntPtr.Zero;
     }
 
+    /// <summary>
+    /// Error 1400 (ERROR_INVALID_WINDOW_HANDLE) means Explorer destroyed the WorkerW in
+    /// the gap between Find() and SetParent(). Callers should treat this as a transient
+    /// and call Find() + Attach() again immediately.
+    /// </summary>
+    internal const int ERROR_INVALID_WINDOW_HANDLE = 1400;
+
     internal static bool Attach(IntPtr window, LayerResult layer, out string failure)
     {
         failure = string.Empty;
@@ -119,7 +126,13 @@ internal static class DesktopLayer
         IntPtr parent = GetAncestor(window, GA_PARENT);
         if (parent != layer.Handle)
         {
-            failure = $"SetParent did not take (parent is 0x{parent.ToInt64():X}, wanted 0x{layer.Handle.ToInt64():X}, win32 error {error})";
+            // If Explorer destroyed the WorkerW between Find() and SetParent() the OS
+            // returns ERROR_INVALID_WINDOW_HANDLE. Signal this distinctly so the caller
+            // can re-find immediately rather than waiting for the retry timer.
+            if (error == ERROR_INVALID_WINDOW_HANDLE)
+                failure = $"layer handle stale (win32 error {error}) — will re-find";
+            else
+                failure = $"SetParent did not take (parent is 0x{parent.ToInt64():X}, wanted 0x{layer.Handle.ToInt64():X}, win32 error {error})";
             return false;
         }
 

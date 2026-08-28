@@ -1,4 +1,4 @@
-// The control console UI — a floating, draggable, translucent terminal-style panel.
+// Settings panel — Fluent-style cards over the same live-config console.
 //
 // This module only builds the DOM and reports intent; it does not decide how changes are
 // applied. The caller passes callbacks:
@@ -12,84 +12,107 @@ import { CORE_IDS, SCENE_IDS, SCENE_META } from './scenes-meta.js';
 import { getCatalog } from './theme-catalog.js';
 
 const HOST_ACTIONS = [
-  'window', 'layout-single', 'layout-span', 'layout-duplicate',
-  'reload', 'folder', 'devtools', 'log', 'diagnose', 'quit', 'kill',
+  { id: 'reload', label: 'Reload scene' },
+  { id: 'folder', label: 'Open scene folder' },
+  { id: 'devtools', label: 'Open DevTools' },
+  { id: 'log', label: 'Open log' },
+  { id: 'diagnose', label: 'Copy diagnostics' },
+  { id: 'quit', label: 'Quit' },
+  { id: 'kill', label: 'Kill process' },
 ];
 
 const CONTROLS = [
-  { section: 'scene' },
+  { section: 'Scene' },
   {
-    group: 'root', key: 'scene', label: 'backdrop', type: 'select', reload: true,
+    group: 'root', key: 'scene', label: 'Backdrop', type: 'select', reload: true,
     options: SCENE_IDS,
   },
   {
-    group: 'root', key: 'paletteName', label: 'palette', type: 'select',
+    group: 'root', key: 'paletteName', label: 'Palette', type: 'select',
     options: ['boreal', 'custom', ...PALETTES.map((p) => p.id)],
   },
 
-  { section: 'aurora' },
-  { group: 'aurora', key: 'intensity', label: 'intensity', min: 0, max: 2, step: 0.01 },
-  { group: 'aurora', key: 'speed', label: 'speed', min: 0, max: 0.3, step: 0.001 },
-  { group: 'aurora', key: 'height', label: 'height', min: 0.05, max: 1.2, step: 0.01 },
+  { section: 'Aurora' },
+  { group: 'aurora', key: 'intensity', label: 'Intensity', min: 0, max: 2, step: 0.01 },
+  { group: 'aurora', key: 'speed', label: 'Speed', min: 0, max: 0.3, step: 0.001 },
+  { group: 'aurora', key: 'height', label: 'Height', min: 0.05, max: 1.2, step: 0.01 },
 
-  { section: 'horizon' },
-  { group: 'horizon', key: 'y', label: 'line', min: 0, max: 0.8, step: 0.01 },
-  { group: 'horizon', key: 'glow', label: 'glow', min: 0, max: 2, step: 0.01 },
-  { group: 'horizon', key: 'reflection', label: 'reflection', min: 0, max: 1, step: 0.01 },
+  { section: 'Horizon' },
+  { group: 'horizon', key: 'y', label: 'Line', min: 0, max: 0.8, step: 0.01 },
+  { group: 'horizon', key: 'glow', label: 'Glow', min: 0, max: 2, step: 0.01 },
+  { group: 'horizon', key: 'reflection', label: 'Reflection', min: 0, max: 1, step: 0.01 },
 
-  { section: 'sky' },
-  { group: 'stars', key: 'density', label: 'stars', min: 0, max: 2, step: 0.01 },
-  { group: 'stars', key: 'twinkle', label: 'twinkle', min: 0, max: 1, step: 0.01 },
-  { group: 'finish', key: 'vignette', label: 'vignette', min: 0, max: 1, step: 0.01 },
-  { group: 'finish', key: 'grain', label: 'grain', min: 0, max: 0.1, step: 0.001 },
+  { section: 'Sky' },
+  { group: 'stars', key: 'density', label: 'Stars', min: 0, max: 2, step: 0.01 },
+  { group: 'stars', key: 'twinkle', label: 'Twinkle', min: 0, max: 1, step: 0.01 },
+  { group: 'finish', key: 'vignette', label: 'Vignette', min: 0, max: 1, step: 0.01 },
+  { group: 'finish', key: 'grain', label: 'Grain', min: 0, max: 0.1, step: 0.001 },
 
-  { section: 'motes' },
-  { group: 'motes', key: 'drift', label: 'drift', min: 0, max: 2, step: 0.01 },
-  { group: 'motes', key: 'opacity', label: 'opacity', min: 0, max: 1, step: 0.01 },
-  { group: 'motes', key: 'color', label: 'colour', type: 'color' },
-  { group: 'motes', key: 'count', label: 'count', min: 0, max: 2000, step: 50, reload: true },
+  { section: 'Motes' },
+  { group: 'motes', key: 'drift', label: 'Drift', min: 0, max: 2, step: 0.01 },
+  { group: 'motes', key: 'opacity', label: 'Opacity', min: 0, max: 1, step: 0.01 },
+  { group: 'motes', key: 'color', label: 'Colour', type: 'color' },
+  { group: 'motes', key: 'count', label: 'Count', min: 0, max: 2000, step: 50, reload: true },
 
-  { section: 'ascii: dunes' },
-  { group: 'ascii.terrascii', key: 'cellPx', label: 'char size', min: 4, max: 28, step: 0.5 },
-  { group: 'ascii.terrascii', key: 'minCols', label: 'min chars', min: 16, max: 320, step: 2 },
-  { group: 'ascii.terrascii', key: 'maxCols', label: 'max chars', min: 16, max: 640, step: 2 },
+  { section: 'ASCII · Dunes' },
+  { group: 'ascii.terrascii', key: 'cellPx', label: 'Char size', min: 4, max: 28, step: 0.5 },
+  { group: 'ascii.terrascii', key: 'minCols', label: 'Min chars', min: 16, max: 320, step: 2 },
+  { group: 'ascii.terrascii', key: 'maxCols', label: 'Max chars', min: 16, max: 640, step: 2 },
 
-  { section: 'ascii: warp' },
-  { group: 'ascii.warpscii', key: 'cellPx', label: 'char size', min: 4, max: 28, step: 0.5 },
-  { group: 'ascii.warpscii', key: 'minCols', label: 'min chars', min: 16, max: 320, step: 2 },
-  { group: 'ascii.warpscii', key: 'maxCols', label: 'max chars', min: 16, max: 640, step: 2 },
+  { section: 'ASCII · Warp' },
+  { group: 'ascii.warpscii', key: 'cellPx', label: 'Char size', min: 4, max: 28, step: 0.5 },
+  { group: 'ascii.warpscii', key: 'minCols', label: 'Min chars', min: 16, max: 320, step: 2 },
+  { group: 'ascii.warpscii', key: 'maxCols', label: 'Max chars', min: 16, max: 640, step: 2 },
 
-  { section: 'ascii: loops' },
-  { group: 'ascii.blobscii', key: 'cellPx', label: 'char size', min: 4, max: 28, step: 0.5 },
-  { group: 'ascii.blobscii', key: 'minCols', label: 'min chars', min: 16, max: 320, step: 2 },
-  { group: 'ascii.blobscii', key: 'maxCols', label: 'max chars', min: 16, max: 640, step: 2 },
+  { section: 'ASCII · Loops' },
+  { group: 'ascii.blobscii', key: 'cellPx', label: 'Char size', min: 4, max: 28, step: 0.5 },
+  { group: 'ascii.blobscii', key: 'minCols', label: 'Min chars', min: 16, max: 320, step: 2 },
+  { group: 'ascii.blobscii', key: 'maxCols', label: 'Max chars', min: 16, max: 640, step: 2 },
 
-  { section: 'palette' },
-  { group: 'palette', key: 'verdant', label: 'aurora.lo', type: 'color' },
-  { group: 'palette', key: 'iris', label: 'aurora.hi', type: 'color' },
-  { group: 'palette', key: 'frost', label: 'highlight', type: 'color' },
-  { group: 'palette', key: 'tide', label: 'sky.base', type: 'color' },
-  { group: 'palette', key: 'void', label: 'sky.deep', type: 'color' },
+  { section: 'ASCII · Glyphfall' },
+  { group: 'ascii.glyphfall', key: 'cellPx', label: 'Char size', min: 4, max: 28, step: 0.5 },
+  { group: 'ascii.glyphfall', key: 'minCols', label: 'Min chars', min: 16, max: 320, step: 2 },
+  { group: 'ascii.glyphfall', key: 'maxCols', label: 'Max chars', min: 16, max: 640, step: 2 },
 
-  { section: 'clock' },
-  { group: 'hud', key: 'enabled', label: 'show', type: 'toggle', reload: true },
+  { section: 'Palette' },
+  { group: 'palette', key: 'verdant', label: 'Aurora lo', type: 'color' },
+  { group: 'palette', key: 'iris', label: 'Aurora hi', type: 'color' },
+  { group: 'palette', key: 'frost', label: 'Highlight', type: 'color' },
+  { group: 'palette', key: 'tide', label: 'Sky base', type: 'color' },
+  { group: 'palette', key: 'void', label: 'Sky deep', type: 'color' },
+
+  { section: 'Clock' },
+  { group: 'hud', key: 'enabled', label: 'Show', type: 'toggle', reload: true },
   {
-    group: 'hud', key: 'corner', label: 'corner', type: 'select', reload: true,
+    group: 'hud', key: 'corner', label: 'Corner', type: 'select', reload: true,
     options: ['top-left', 'top-right', 'bottom-left', 'bottom-right'],
   },
 
-  { section: 'audio' },
-  { group: 'audio', key: 'enabled', label: 'sound', type: 'toggle' },
-  { group: 'audio', key: 'volume', label: 'volume', min: 0, max: 1, step: 0.01 },
+  { section: 'Audio' },
+  { group: 'audio', key: 'enabled', label: 'Sound', type: 'toggle' },
+  { group: 'audio', key: 'volume', label: 'Volume', min: 0, max: 1, step: 0.01 },
 
-  { section: 'this theme' },
-  { group: 'tune', key: 'intensity', label: 'intensity', min: 0, max: 2, step: 0.01 },
-  { group: 'tune', key: 'speed', label: 'speed', min: 0, max: 0.3, step: 0.001 },
-  { group: 'tune', key: 'height', label: 'height', min: 0.05, max: 1.2, step: 0.01 },
-  { group: 'tune', key: 'volume', label: 'volume', min: 0, max: 1, step: 0.01 },
-  { group: 'tune', key: 'geeked', label: 'geeked', type: 'toggle' },
+  { section: 'This theme' },
+  { group: 'tune', key: 'intensity', label: 'Intensity', min: 0, max: 2, step: 0.01 },
+  { group: 'tune', key: 'speed', label: 'Speed', min: 0, max: 0.3, step: 0.001 },
+  { group: 'tune', key: 'height', label: 'Height', min: 0.05, max: 1.2, step: 0.01 },
+  { group: 'tune', key: 'volume', label: 'Volume', min: 0, max: 1, step: 0.01 },
+  { group: 'tune', key: 'geeked', label: 'Geeked', type: 'toggle' },
 
-  { section: 'host' },
+  { section: 'Personalization' },
+  { type: 'note', text: 'Windows has no API for a fourth Background type. 3JSxWin attaches to the desktop WorkerW layer instead, and registers the hooks a Win32 app is actually allowed to use.' },
+  { type: 'command', action: 'desktop', label: 'Set as desktop background', hint: 'Attach behind icons via WorkerW' },
+  { type: 'command', action: 'window', label: 'Show in a window', hint: 'Pull the scene off the desktop' },
+  { type: 'command', action: 'layout-single', label: 'This monitor', hint: 'Cover the primary display only' },
+  { type: 'command', action: 'layout-span', label: 'Span all monitors', hint: 'One continuous scene' },
+  { type: 'command', action: 'layout-duplicate', label: 'Duplicate on all monitors', hint: 'One copy per display' },
+  { type: 'command', action: 'startup-on', label: 'Start with Windows', hint: 'Startup-folder shortcut' },
+  { type: 'command', action: 'startup-off', label: 'Don’t start with Windows' },
+  { type: 'command', action: 'windows-settings', label: 'Windows background settings', hint: 'ms-settings:personalization-background' },
+  { type: 'command', action: 'screensaver-on', label: 'Use as screensaver', hint: 'Registers this exe; not a picker list item' },
+  { type: 'command', action: 'register-shell', label: 'Register Windows hooks', hint: 'Desktop menu, protocol, theme, screensaver' },
+
+  { section: 'Host' },
   { type: 'actions', buttons: HOST_ACTIONS },
 ];
 
@@ -105,17 +128,17 @@ export function createPanel(config, { onChange, onCommand } = {}) {
   root.innerHTML = `
     <div class="console__bar" data-drag>
       <span class="console__dot"></span>
-      <span class="console__name">backdrop.cfg</span>
+      <span class="console__name">Settings</span>
       <button class="console__x" data-act="close" type="button" title="Esc">×</button>
     </div>
     <div class="console__body"></div>
-    <div class="console__ref"># three.js examples · threejs.org/examples</div>
+    <div class="console__ref">3JSxWin · live wallpaper</div>
     <div class="console__foot">
-      <span class="console__stat" data-stat>ready</span>
+      <span class="console__stat" data-stat>Ready</span>
       <span class="console__actions">
-        <button class="console__btn" data-act="shuffle" type="button">SHUFFLE</button>
-        <button class="console__btn" data-act="reset" type="button">RESET</button>
-        <button class="console__btn console__btn--go" data-act="save" type="button">SAVE</button>
+        <button class="console__btn" data-act="shuffle" type="button">Shuffle</button>
+        <button class="console__btn" data-act="reset" type="button">Reset</button>
+        <button class="console__btn console__btn--go" data-act="save" type="button">Save</button>
       </span>
     </div>`;
 
@@ -123,23 +146,33 @@ export function createPanel(config, { onChange, onCommand } = {}) {
   const stat = root.querySelector('[data-stat]');
   const setStat = (t) => { stat.textContent = t; };
 
-  for (const c of CONTROLS) {
-    if (c.section) {
-      const h = document.createElement('div');
-      h.className = 'console__group';
-      h.textContent = `> ${c.section}`;
-      body.appendChild(h);
-      continue;
-    }
-    body.appendChild(buildRow(c));
+  let card = null;
+  function startCard(title) {
+    const wrap = document.createElement('section');
+    wrap.className = 'console__card';
+    const h = document.createElement('h2');
+    h.className = 'console__group';
+    h.textContent = title;
+    wrap.appendChild(h);
+    body.appendChild(wrap);
+    card = wrap;
+    return wrap;
+  }
+  function host() {
+    return card ?? body;
   }
 
-  const libHead = document.createElement('div');
-  libHead.className = 'console__group';
-  libHead.textContent = '> library';
-  body.appendChild(libHead);
+  for (const c of CONTROLS) {
+    if (c.section) {
+      startCard(c.section);
+      continue;
+    }
+    host().appendChild(buildRow(c));
+  }
+
+  startCard('Library');
   for (const theme of getCatalog()) {
-    body.appendChild(buildRow({
+    card.appendChild(buildRow({
       group: 'installed', key: theme.id, label: theme.label ?? theme.id, type: 'toggle',
     }));
   }
@@ -147,18 +180,45 @@ export function createPanel(config, { onChange, onCommand } = {}) {
   if (sceneSel) syncSceneOptions(sceneSel, draft);
 
   function buildRow(c) {
+    if (c.type === 'note') {
+      const note = document.createElement('p');
+      note.className = 'console__note';
+      note.textContent = c.text;
+      return note;
+    }
+
+    if (c.type === 'command') {
+      const row = document.createElement('button');
+      row.type = 'button';
+      row.className = 'console__command';
+      const text = document.createElement('span');
+      text.className = 'console__command-text';
+      const name = document.createElement('span');
+      name.className = 'console__label';
+      name.textContent = c.label;
+      text.appendChild(name);
+      if (c.hint) {
+        const hint = document.createElement('span');
+        hint.className = 'console__hint';
+        hint.textContent = c.hint;
+        text.appendChild(hint);
+      }
+      const chev = document.createElement('span');
+      chev.className = 'console__chevron';
+      chev.textContent = '›';
+      row.append(text, chev);
+      row.addEventListener('click', () => onCommand?.('host', { action: c.action }));
+      return row;
+    }
+
     if (c.type === 'actions') {
       const wrap = document.createElement('div');
-      wrap.className = 'console__actions';
-      wrap.style.flexWrap = 'wrap';
-      wrap.style.gap = '4px';
-      wrap.style.padding = '4px 0 8px';
-      for (const id of c.buttons) {
+      wrap.className = 'console__hostgrid';
+      for (const item of c.buttons) {
+        const id = typeof item === 'string' ? item : item.id;
+        const label = typeof item === 'string' ? item : item.label;
         const btn = el('button', { type: 'button', class: 'console__btn', 'data-host': id });
-        btn.textContent = id;
-        btn.style.padding = '2px 6px';
-        btn.style.fontSize = '10px';
-        btn.style.letterSpacing = '0.04em';
+        btn.textContent = label;
         btn.addEventListener('click', () => onCommand?.('host', { action: id }));
         wrap.appendChild(btn);
       }
@@ -247,23 +307,23 @@ export function createPanel(config, { onChange, onCommand } = {}) {
         }
       }
     }
-    setStat('* unsaved');
+    setStat('Unsaved');
     onChange?.(draft, c);
   }
 
   root.querySelector('[data-act="save"]').addEventListener('click', () => {
-    if (!dirty) { setStat('nothing to save'); return; }
+    if (!dirty) { setStat('Nothing to save'); return; }
     onCommand?.('save', { config: draft, reload: needsReload });
     dirty = false;
-    setStat(needsReload ? 'saved · reloading' : 'saved');
+    setStat(needsReload ? 'Saved · reloading' : 'Saved');
   });
   root.querySelector('[data-act="shuffle"]').addEventListener('click', () => {
     onCommand?.('shuffle');
-    setStat('shuffled palette');
+    setStat('Shuffled palette');
   });
   root.querySelector('[data-act="reset"]').addEventListener('click', () => {
     onCommand?.('reset');
-    setStat('reset from backup');
+    setStat('Reset from backup');
   });
   root.querySelector('[data-act="close"]').addEventListener('click', () => onCommand?.('close'));
   root.addEventListener('keydown', (e) => {
@@ -344,7 +404,7 @@ function writeValue(draft, c, value) {
 
 function syncSceneOptions(sel, draft) {
   const allow = new Set(getCatalog().map((t) => t.id));
-  const ids = [...CORE_IDS, ...(draft.installed ?? []).filter((id) => allow.has(id))];
+  const ids = [...CORE_IDS, ...(draft.installed ?? []).filter((id) => allow.has(id) && !CORE_IDS.includes(id))];
   const current = draft.scene;
   sel.replaceChildren();
   for (const opt of ids) {

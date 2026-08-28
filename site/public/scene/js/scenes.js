@@ -4,7 +4,7 @@
 import * as THREE from 'three';
 import { hexToRgb } from './config.js';
 import { createSky } from './sky.js';
-import { ASCII_GBUFFER, ASCII_SCENE_IDS, createAsciiBackdrop } from './ascii.js?v=3';
+import { ASCII_GBUFFER, ASCII_SCENE_IDS, createAsciiBackdrop } from './ascii.js?v=4';
 export { SCENE_IDS, SCENE_META } from './scenes-meta.js';
 import { SCENE_IDS } from './scenes-meta.js';
 import { VERTEX, COMMON } from './shader-lib.js';
@@ -67,35 +67,6 @@ const TERRASCII = ASCII_GBUFFER + /* glsl */ `
     float spec = pow(clamp(dot(reflect(-sun, nrm), -rd), 0.0, 1.0), 22.0);
     float fog = exp(-hit * 0.07);
     gl_FragColor = asciiLit(diff, spec, fog, 0.0);
-  }
-`;
-
-const STARWELL = COMMON + /* glsl */ `
-  void main() {
-    vec2 uv = vUv;
-    float aspect = uResolution.x / max(uResolution.y, 1.0);
-    float t = uTime * (0.18 + uSpeed * 2.4);
-    vec2 p = vec2((uv.x - 0.5) * aspect, uv.y - 0.5);
-    float r = length(p);
-    float a = atan(p.y, p.x);
-
-    // Logarithmic spiral well.
-    float well = log(max(r, 0.002)) * 3.2 - t;
-    float rings = 0.5 + 0.5 * sin(well * 6.0 + a * 3.0);
-    float spokes = 0.5 + 0.5 * sin(a * 10.0 + well * 0.6);
-    float tunnel = pow(rings, 3.0) * mix(0.4, 1.0, spokes) * uIntensity;
-    tunnel *= smoothstep(1.2, 0.05, r);
-
-    vec3 col = mix(uTide, uVoid, smoothstep(0.0, 0.85, r));
-    col += mix(uVerdant, uIris, fract(well * 0.12)) * tunnel;
-    col += uFrost * exp(-r * 14.0) * uHorizonGlow * 0.55;
-
-    // Star streaks flying out of the well.
-    float streak = hash21(vec2(floor(a * 28.0), floor(well)));
-    float fly = step(1.0 - uStars * 0.18, streak) * exp(-abs(fract(well) - 0.5) * 18.0);
-    col += uFrost * fly * (0.4 + 0.6 * uTwinkle) * 0.7;
-
-    gl_FragColor = vec4(finish(col, uv), 1.0);
   }
 `;
 
@@ -263,136 +234,53 @@ const BLOBSCII = ASCII_GBUFFER + /* glsl */ `
   }
 `;
 
-const EMBER = COMMON + /* glsl */ `
+const GLYPHFALL = ASCII_GBUFFER + /* glsl */ `
+  // Falling-glyph cascade. The G-buffer is already one cell per fragment,
+  // so each pixel is one rain drop / trail sample — no raymarch, no tubes.
   void main() {
     vec2 uv = vUv;
-    float aspect = uResolution.x / max(uResolution.y, 1.0);
-    float t = uTime * (0.2 + uSpeed * 1.4);
-    vec2 p = vec2((uv.x - 0.5) * aspect, uv.y);
-    float column = exp(-pow(p.x / (0.18 + 0.08 * uv.y), 2.0));
-    float rise = fract(uv.y * 4.0 - t * 0.35);
-    float heat = column * (0.25 + 0.75 * (1.0 - uv.y)) * uIntensity;
-    vec3 col = mix(uVoid, uTide, uv.y * 0.3);
-    col = mix(col, uIris, heat * 0.45);
-    col = mix(col, uVerdant, heat * rise * 0.35);
-    vec2 g = uv * uResolution / 7.0;
-    vec2 id = floor(g);
-    float n = hash21(id);
-    vec2 f = fract(g) - 0.5;
-    f.y += fract(t * (0.4 + n) + n) - 0.5;
-    float spark = smoothstep(0.18, 0.0, length(f)) * step(0.62, n) * column;
-    col += mix(uIris, uFrost, n) * spark * 1.4;
-    col += uFrost * exp(-length(p - vec2(0.0, 0.0)) * 8.0) * 0.15 * uHorizonGlow;
-    gl_FragColor = vec4(finish(col, uv), 1.0);
-  }
-`;
+    float t = uTime * (0.32 + uSpeed * 2.0);
+    float col = floor(gl_FragCoord.x);
+    float row = floor(gl_FragCoord.y);
 
-const KELP = COMMON + /* glsl */ `
-  // Underwater forest: depth gradient, light shafts, caustics, swaying fronds.
-  void main() {
-    vec2 uv = vUv;
-    float aspect = uResolution.x / max(uResolution.y, 1.0);
-    float t = uTime * (0.14 + uSpeed * 1.3);
-    vec2 p = vec2((uv.x - 0.5) * aspect, uv.y);
-
-    vec3 deep = mix(uVoid, uTide, 0.22 + 0.42 * uv.y);
-    float shaft = 0.0;
-    for (int i = 0; i < 4; i++) {
-      float fi = float(i);
-      float x = (hash21(vec2(fi, 2.2)) - 0.5) * aspect * 1.45;
-      x += 0.07 * sin(t * 0.37 + fi * 1.7);
-      shaft += exp(-pow((p.x - x) / (0.07 + 0.14 * uv.y), 2.0)) * (0.12 + 0.28 * uv.y);
+    float lum = 0.0;
+    float head = 0.0;
+    for (int layer = 0; layer < 2; layer++) {
+      float lf = float(layer);
+      float seed = hash21(vec2(col + lf * 17.0, 3.1 + lf));
+      float spd = 0.55 + seed * 1.35 + lf * 0.28;
+      float cells = 9.0 + seed * 12.0;
+      float y = fract((row / max(cells, 1.0)) - t * spd + seed * 6.0);
+      float trail = pow(1.0 - y, 1.65 + lf * 0.4);
+      float h = exp(-y * (16.0 + lf * 8.0));
+      float live = step(0.16 - lf * 0.04, seed);
+      float tick = 0.5 + 0.5 * hash21(vec2(col, floor(row + t * spd * cells)));
+      lum += trail * live * tick * (0.62 - lf * 0.18);
+      head = max(head, h * live);
     }
-    vec3 col = deep + mix(uTide, uFrost, 0.45) * shaft * 0.5 * uHorizonGlow;
 
-    vec2 q = p * vec2(4.0, 2.8) + vec2(t * 0.32, -t * 0.21);
-    float cau = sin(q.x + sin(q.y * 1.25 + t)) * sin(q.y * 0.92 - t * 0.68);
-    col += mix(uVerdant, uFrost, 0.35) * pow(abs(cau), 2.6) * 0.2 * uv.y * uIntensity;
+    lum *= uIntensity;
+    // Quiet the usual desktop-icon column so labels stay readable.
+    lum *= mix(0.07, 1.0, smoothstep(0.0, 0.16, uv.x));
+    lum *= mix(0.55, 1.0, uv.y);
 
-    float fronds = 0.0;
-    float leaf = 0.0;
-    for (int i = 0; i < 13; i++) {
-      float fi = float(i);
-      float seed = hash21(vec2(fi, 9.1));
-      float near = step(0.78, seed);
-      float base = (seed - 0.5) * aspect * 1.85;
-      float sway = 0.12 * sin(uv.y * 3.1 + t * 1.05 + seed * 6.0)
-                 + 0.05 * sin(uv.y * 7.0 - t * 0.72 + fi);
-      float x = base + sway * (0.22 + uv.y * (0.8 + near));
-      float thick = (0.014 + 0.028 * seed) * (1.2 - uv.y * 0.7) * (0.7 + 0.3 * uHeight);
-      thick *= 1.0 + near * 2.1;
-      float body = smoothstep(thick, 0.0, abs(p.x - x));
-      fronds = max(fronds, body * (0.35 + 0.65 * uv.y));
-      float nubs = 0.5 + 0.5 * sin((uv.y + seed) * 24.0 + t * 0.8);
-      leaf = max(leaf, body * nubs * smoothstep(thick * 2.4, 0.0, abs(p.x - x) - thick * 0.9));
+    if (lum < 0.025) {
+      gl_FragColor = vec4(0.0);
+      return;
     }
-    col = mix(col, mix(uTide, uVerdant, 0.58), fronds * 0.82);
-    col = mix(col, uVerdant, leaf * 0.34);
 
-    vec2 g = p * vec2(26.0, 17.0) + vec2(t * 0.35, t * 0.12);
-    vec2 gf = fract(g) - 0.5;
-    float spark = smoothstep(0.2, 0.0, length(gf))
-                * step(0.965 - uStars * 0.02, hash21(floor(g)))
-                * (0.35 + 0.65 * uTwinkle);
-    col += uFrost * spark * 0.7;
-
-    gl_FragColor = vec4(finish(col, uv), 1.0);
-  }
-`;
-
-const MURMUR = COMMON + /* glsl */ `
-  // Starling murmuration: two orbiting density ribbons, hash specks for birds.
-  void main() {
-    vec2 uv = vUv;
-    float aspect = uResolution.x / max(uResolution.y, 1.0);
-    float t = uTime * (0.16 + uSpeed * 1.5);
-    vec2 p = vec2((uv.x - 0.5) * aspect, uv.y - 0.44);
-
-    vec3 col = mix(uVoid, uTide, 0.22 + 0.38 * smoothstep(-0.45, 0.62, p.y));
-    col = mix(col, mix(uIris, uTide, 0.5), exp(-abs(p.y + 0.06) * 3.8) * 0.38 * uHorizonGlow);
-    col = mix(col, mix(uVoid, uTide, 0.35), smoothstep(0.1, 0.0, uv.y) * 0.65);
-
-    vec2 c0 = vec2(sin(t * 0.31) * 0.40, 0.12 + cos(t * 0.23) * 0.16);
-    vec2 c1 = vec2(cos(t * 0.27) * 0.34, -0.02 + sin(t * 0.19) * 0.14);
-
-    float dens = 0.0;
-    for (int i = 0; i < 2; i++) {
-      vec2 c = (i == 0) ? c0 : c1;
-      vec2 q = p - c;
-      q += 0.20 * vec2(
-        fbm(q * 1.5 + vec2(t * 0.4, float(i) * 2.1)) - 0.5,
-        fbm(q * 1.5 + vec2(4.4, -t * 0.33)) - 0.5
-      );
-      float r = length(q * vec2(1.0, 1.35));
-      float a = atan(q.y, q.x);
-      float body = smoothstep(0.38 + 0.08 * uHeight, 0.06, r);
-      float grain = 0.35 + 0.65 * fbm(vec2(a * 1.4 + t * 0.6, r * 3.4 - t * 0.5) + float(i));
-      dens += body * grain;
-    }
-    dens *= uIntensity;
-
-    vec2 g = p * 52.0 + vec2(t * 1.6, -t * 0.4);
-    vec2 f = fract(g) - 0.5;
-    float n = hash21(floor(g));
-    float bird = smoothstep(0.22, 0.0, length(f)) * step(0.62, n) * dens;
-
-    col = mix(col, mix(uTide, uIris, 0.38), clamp(dens * 0.55, 0.0, 1.0));
-    col += mix(uVoid, uFrost, 0.9) * bird * 1.2;
-    col += uFrost * dens * 0.08;
-
-    gl_FragColor = vec4(finish(col, uv), 1.0);
+    float diff = clamp(lum, 0.0, 1.0);
+    float spec = head * 0.9;
+    gl_FragColor = asciiLit(diff, spec, 1.0, head * 0.35);
   }
 `;
 
 const FRAGMENTS = {
   terrascii: TERRASCII,
-  starwell: STARWELL,
   warpscii: WARPSCII,
   ion: ION,
   blobscii: BLOBSCII,
-  ember: EMBER,
-  kelp: KELP,
-  murmur: MURMUR,
+  glyphfall: GLYPHFALL,
 };
 
 function createShaderBackdrop(fragment, config) {
@@ -487,6 +375,9 @@ export function createScene(name, config, themeMod = null) {
   if (id === 'aurora') return createSky(config);
   if (ASCII_SCENE_IDS.has(id) && FRAGMENTS[id]) return createAsciiBackdrop(FRAGMENTS[id], config, id);
   if (FRAGMENTS[id]) return createShaderBackdrop(FRAGMENTS[id], config);
+  // Optional theme failed to load: do not silently paint Aurora while the UI
+  // still says the theme name. Sky only when the id is actually aurora.
+  console.warn('createScene: no shader for', name);
   return createSky(config);
 }
 

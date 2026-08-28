@@ -6,6 +6,7 @@ using System.Windows.Threading;
 using Backdrop.DevLoop;
 using Backdrop.Interop;
 using Backdrop.Startup;
+using Backdrop.Shell;
 using Microsoft.Web.WebView2.Core;
 using static Backdrop.Interop.NativeMethods;
 
@@ -30,6 +31,7 @@ internal sealed class SceneHost : IDisposable
 
     private CoreWebView2Environment? _environment;
     private ConsoleWindow? _console;
+    private CommsWindow? _comms;
     private bool _rebuilding;
 
     internal bool IsWindowedMode { get; private set; }
@@ -49,7 +51,8 @@ internal sealed class SceneHost : IDisposable
         _hotkey = new Hotkey(
             () => Application.Current.Dispatcher.BeginInvoke(ToggleConsole),
             cmd => Application.Current.Dispatcher.BeginInvoke(() => BroadcastSceneCommand(cmd)),
-            () => Application.Current.Dispatcher.BeginInvoke(() => _rebuild.Trigger()));
+            () => Application.Current.Dispatcher.BeginInvoke(() => _rebuild.Trigger()),
+            () => Application.Current.Dispatcher.BeginInvoke(ToggleComms));
 
         // Coalesces the burst of DisplayChanged events every window in the group raises for
         // the same physical event into one reconcile pass.
@@ -198,6 +201,11 @@ internal sealed class SceneHost : IDisposable
 
     // ------------------------------------------------------------------- modes
 
+    internal void SetDesktopBackground()
+    {
+        if (IsWindowedMode) ToggleWindowedMode();
+    }
+
     internal void ToggleWindowedMode()
     {
         _console?.Close();
@@ -234,6 +242,16 @@ internal sealed class SceneHost : IDisposable
     /// messages fan out to every window in the group, since every monitor shares one scene
     /// and one config.
     /// </summary>
+    internal void OpenConsole()
+    {
+        if (_console is not null)
+        {
+            _console.Activate();
+            return;
+        }
+        ToggleConsole();
+    }
+
     private void ToggleConsole()
     {
         if (_console is not null)
@@ -249,6 +267,145 @@ internal sealed class SceneHost : IDisposable
         _console.Closed += (_, _) => _console = null;
         _console.Show();
         _console.Activate();
+    }
+
+    internal void ToggleComms()
+    {
+        if (_comms is not null)
+        {
+            Log.Write("Comms close");
+            _comms.Close();
+            return;
+        }
+        if (_environment is null || _windows.Count == 0)
+        {
+            Log.Write("Comms skipped — host not up yet");
+            return;
+        }
+
+        try
+        {
+            _comms = new CommsWindow(_windows[0].WebRoot, _options.DevTools, _environment);
+            _comms.Message += OnCommsMessage;
+            _comms.Closed += (_, _) => _comms = null;
+            _comms.Show();
+            _comms.Activate();
+            IntPtr hwnd = new System.Windows.Interop.WindowInteropHelper(_comms).Handle;
+            if (hwnd != IntPtr.Zero)
+            {
+                SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0,
+                    SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW);
+            }
+            Log.Write("Comms open");
+        }
+        catch (Exception ex)
+        {
+            Log.Write("Comms open failed", ex);
+            try { _comms?.Close(); } catch { /* already gone */ }
+            _comms = null;
+        }
+    }
+
+    private void OnCommsMessage(JsonElement root)
+    {
+        if (!root.TryGetProperty("type", out var type)) return;
+        switch (type.GetString())
+        {
+            case "close":
+                _comms?.Close();
+                break;
+            case "drag":
+                _comms?.BeginDrag();
+                break;
+            case "comms-hello":
+            {
+                string webRoot = _windows[0].WebRoot;
+                _ = Task.Run(async () =>
+                {
+                    var list = await LlmClient.ListModelsAsync(webRoot, CancellationToken.None);
+                    var models = list.Models.Select(m => new { id = m.Id, kind = m.Kind }).ToArray();
+                    Application.Current?.Dispatcher.BeginInvoke(() =>
+                    {
+                        _comms?.Send(new { type = "llm-models", models, current = list.Current, imageModel = list.ImageModel });
+                        _comms?.Send(new { type = "llm-status", text = LlmClient.CarrierStatus(webRoot) });
+                    });
+                });
+                break;
+            }
+            case "llm":
+            {
+                string id = root.TryGetProperty("id", out var idEl) ? idEl.GetString() ?? "" : "";
+                JsonElement messages = root.TryGetProperty("messages", out var m) ? m.Clone() : default;
+                JsonElement files = root.TryGetProperty("files", out var f) ? f.Clone() : default;
+                bool imagine = root.TryGetProperty("imagine", out var ig) && ig.ValueKind is JsonValueKind.True;
+                string model = root.TryGetProperty("model", out var mo) ? mo.GetString() ?? "" : "";
+                string webRoot = _windows[0].WebRoot;
+                _ = Task.Run(async () =>
+                {
+                    LlmReply reply;
+                    try { reply = await LlmClient.CompleteAsync(webRoot, messages, files, imagine, CancellationToken.None, model); }
+                    catch (Exception ex)
+                    {
+                        Log.Write("LLM failed", ex);
+                        reply = new LlmReply { Text = "UPLINK FAILED — " + ex.Message };
+                    }
+                    Application.Current?.Dispatcher.BeginInvoke(() =>
+                        _comms?.Send(new { type = "llm-result", id, text = reply.Text, images = reply.Images }));
+                });
+                break;
+            }
+            case "llm-imagine":
+            {
+                string id = root.TryGetProperty("id", out var iid) ? iid.GetString() ?? "" : "";
+                string prompt = root.TryGetProperty("prompt", out var pr) ? pr.GetString() ?? "" : "";
+                string webRoot = _windows[0].WebRoot;
+                _ = Task.Run(async () =>
+                {
+                    LlmReply reply;
+                    try { reply = await LlmClient.ImagineAsync(webRoot, prompt, CancellationToken.None); }
+                    catch (Exception ex)
+                    {
+                        Log.Write("image gen failed", ex);
+                        reply = new LlmReply { Text = "IMAGE GEN FAILED — " + ex.Message };
+                    }
+                    Application.Current?.Dispatcher.BeginInvoke(() =>
+                        _comms?.Send(new { type = "llm-result", id, text = reply.Text, images = reply.Images }));
+                });
+                break;
+            }
+            case "llm-upload":
+            {
+                string id = root.TryGetProperty("id", out var uid) ? uid.GetString() ?? "" : "";
+                string name = root.TryGetProperty("name", out var nm) ? nm.GetString() ?? "upload.bin" : "upload.bin";
+                string mime = root.TryGetProperty("mime", out var mi) ? mi.GetString() ?? "application/octet-stream" : "application/octet-stream";
+                string b64 = root.TryGetProperty("data", out var da) ? da.GetString() ?? "" : "";
+                string webRoot = _windows[0].WebRoot;
+                _ = Task.Run(async () =>
+                {
+                    object payload;
+                    try
+                    {
+                        byte[] bytes = Convert.FromBase64String(b64);
+                        if (bytes.Length > 8 * 1024 * 1024)
+                            payload = new { type = "llm-uploaded", id, error = "File over 8 MB." };
+                        else
+                        {
+                            var up = await LlmClient.UploadAsync(webRoot, name, mime, bytes, CancellationToken.None);
+                            payload = up is null
+                                ? new { type = "llm-uploaded", id, error = "Upload failed." }
+                                : (object)new { type = "llm-uploaded", id, file = new { id = up.Value.Id, name = up.Value.Name } };
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Log.Write("file upload failed", ex);
+                        payload = new { type = "llm-uploaded", id, error = ex.Message };
+                    }
+                    Application.Current?.Dispatcher.BeginInvoke(() => _comms?.Send(payload));
+                });
+                break;
+            }
+        }
     }
 
     /// <summary>Routes a message from the console window to every scene and to disk.</summary>
@@ -288,6 +445,24 @@ internal sealed class SceneHost : IDisposable
         {
             case "window":
                 ToggleWindowedMode();
+                break;
+            case "desktop":
+                SetDesktopBackground();
+                break;
+            case "startup-on":
+                ShellIntegration.SetStartup(true);
+                break;
+            case "startup-off":
+                ShellIntegration.SetStartup(false);
+                break;
+            case "windows-settings":
+                ShellIntegration.OpenWindowsBackgroundSettings();
+                break;
+            case "screensaver-on":
+                ShellIntegration.EnableScreensaver();
+                break;
+            case "register-shell":
+                ShellIntegration.Register();
                 break;
             case "layout-single":
                 SetLayoutMode(LayoutMode.Single);

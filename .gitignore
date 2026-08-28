@@ -3,6 +3,8 @@ bin/
 obj/
 dist/
 dist.new/
+dist-fences/
+win11backdrop-update/
 *.user
 *.suo
 *.userprefs
@@ -42,3 +44,7 @@ Desktop.ini
 # Personal captures / not the project
 Recording*.mp4
 "Recording *.mp4"
+suggests/
+site/public/scene_backup*/
+src/themes/
+groks-REV*.MD

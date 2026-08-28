@@ -29,16 +29,16 @@ The renderer is a vendored three.js scene (r185, offline). Tune it live with `Ct
 
 ## Features
 
-- Nine core scenes always loaded: Aurora, Tube Dunes, Starwell, Tube Warp, Ion, Tube Loops, Ember, Kelp, Murmur
-- Optional library under `web/themes/` (Mycelight, Mothwork, Coralnet, Lungclock, Inkatrium, Foldwell, Sporehall, Orreryheart, Threadloom, **Deep Field**) — files ship, shaders load only after you install them in the console. Preview v2: Deep Field (nebula, debris, meteor storms).
+- Six core scenes always loaded: Aurora, Tube Dunes, Tube Warp, Ion, Tube Loops, Glyphfall
+- Optional library under `web/themes/` (Farfield, Globule, Night Field, Star Node, Solar System) — files ship, shaders load only after you install them in the console
 - Generated soundscapes (no files); optional themes bring their own graph
 - ASCII scenes use a 32-glyph density ramp, palette-tinted ink, and a 480-column cap
 - Palette randomizer using real Neovim themes (Catppuccin, Tokyo Night, Rosé Pine, Kanagawa, …)
 - Dual-monitor default: one native-resolution copy per display (`--duplicate-all`)
 - `--window` preview before anything touches the desktop
 - Tray icon: window/desktop toggle, layout, reload, diagnostics, quit
-- On-scene console (`Ctrl+Alt+B`) with live sliders and colour pickers
-- Startup shortcut — no admin, no registry
+- Settings panel (`Ctrl+Alt+B`) with live sliders — Fluent cards, same SAVE vs discard behaviour
+- Startup shortcut, desktop context menu, `3jsxwin:` protocol, and a companion `.theme` — no admin. Cannot add a fourth Background type in Windows Settings.
 - Adaptive quality ladder so it can sit in the background for hours
 
 ## Quick start
@@ -96,7 +96,7 @@ With two or more monitors the default is **duplicate** (one scene per display at
 .\install-startup.ps1 -Remove
 ```
 
-Win+`]` next scene · Win+`[` previous · Win+`P` shuffle palette. Each switch shows the scene name and palette for a couple of seconds.
+Win+`]` next scene · Win+`[` previous · Win+`P` shuffle palette. Win+`C` opens Comms (steals the chord from Copilot). Each switch shows the scene name and palette for a couple of seconds.
 
 ### Tune the scene
 

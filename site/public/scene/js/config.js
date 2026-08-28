@@ -17,20 +17,19 @@ const FALLBACK = {
     terrascii: { cellPx: 6, minCols: 80, maxCols: 480 },
     warpscii: { cellPx: 6, minCols: 80, maxCols: 480 },
     blobscii: { cellPx: 6, minCols: 80, maxCols: 480 },
+    glyphfall: { cellPx: 8, minCols: 64, maxCols: 360 },
   },
   hud: { enabled: false, corner: 'bottom-right', clock24h: true, locale: 'en-CA' },
+  comms: { enabled: true, url: 'https://ai.yakupov.xyz/api/chat/completions', baseUrl: 'https://ai.yakupov.xyz/api', model: 'cheap', apiKey: '', path: 'chat/completions' },
   audio: { enabled: true, volume: 0.2 },
   installed: [],
   scenes: {
     aurora: { intensity: 1.6, speed: 0.16, height: 0.95, volume: 0.18 },
     terrascii: { intensity: 1.1, speed: 0.12, height: 0.7, volume: 0.08 },
-    starwell: { intensity: 1.4, speed: 0.2, height: 0.9, volume: 0.16 },
     warpscii: { intensity: 1.3, speed: 0.22, height: 0.85, volume: 0.1 },
     ion: { intensity: 1.2, speed: 0.1, height: 0.8, volume: 0.14 },
     blobscii: { intensity: 1.15, speed: 0.16, height: 0.75, volume: 0.08 },
-    ember: { intensity: 1.35, speed: 0.14, height: 0.8, volume: 0.2 },
-    kelp: { intensity: 1.15, speed: 0.13, height: 0.75, volume: 0.22 },
-    murmur: { intensity: 1.25, speed: 0.16, height: 0.7, volume: 0.18 },
+    glyphfall: { intensity: 1.2, speed: 0.18, height: 0.85, volume: 0.1 },
   },
 };
 

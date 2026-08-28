@@ -5,14 +5,14 @@
 // you are actually doing.
 
 import * as THREE from 'three';
-import { loadConfig } from './config.js?v=12';
+import { loadConfig } from './config.js?v=13';
 import { createMotes } from './motes.js?v=6';
 import { createHud } from './hud.js?v=6';
 import { tellHost, onHostMessage, reportError } from './host.js?v=6';
-import { createScene, nextSceneId, SCENE_IDS, SCENE_META } from './scenes.js?v=20';
+import { createScene, nextSceneId, SCENE_IDS, SCENE_META } from './scenes.js?v=24';
 import { findPalette, randomPalette, applyPaletteToConfig } from './palettes.js?v=7';
-import { createLowVibe } from './audio.js?v=11';
-import { loadCatalog, setInstalled, loadTheme, resolveSceneId, dropTheme } from './theme-catalog.js';
+import { createLowVibe } from './audio.js?v=14';
+import { loadCatalog, setInstalled, loadTheme, resolveSceneId, dropTheme, getCatalog, ensureInstalled, getInstalled } from './theme-catalog.js';
 
 THREE.ColorManagement.enabled = false;
 
@@ -35,6 +35,14 @@ async function boot() {
   const config = await loadConfig();
   await loadCatalog();
   setInstalled(config.installed);
+  const queryScene = new URLSearchParams(location.search).get('scene');
+  // Optional themes are not core: if they are not in `installed`, resolveSceneId
+  // returns aurora. WebView2 has no ?scene= by default, so config.scene must
+  // also auto-install when it names a catalog theme.
+  ensureInstalled(queryScene);
+  ensureInstalled(config.scene);
+  config.installed = getInstalled();
+  if (queryScene) config.scene = queryScene;
   config.scene = resolveSceneId(config.scene);
   const canvas = document.getElementById('stage');
   const hosted = Boolean(globalThis.chrome?.webview);
@@ -48,7 +56,7 @@ async function boot() {
   }
 
   function CORE_HAS_MOTES(id) {
-    return id === 'aurora' || id === 'starwell' || id === 'ion' || id === 'ember';
+    return id === 'aurora' || id === 'ion';
   }
   const motesOn = (config.motes.count | 0) > 0 && CORE_HAS_MOTES(config.scene);
 
@@ -86,6 +94,9 @@ async function boot() {
   renderer.autoClear = !motesOn;
 
   let themeMod = await loadTheme(config.scene);
+  if (!themeMod?.fragment && getCatalog().some((t) => t.id === config.scene)) {
+    reportError('theme', new Error(`${config.scene} failed to load; showing aurora`));
+  }
   vibe?.setThemeModule?.(themeMod);
   sky = createScene(config.scene, config, themeMod);
   let flyers = null;
@@ -178,17 +189,33 @@ async function boot() {
   }
 
   async function switchScene(name) {
+    ensureInstalled(name);
+    config.installed = getInstalled();
     const next = resolveSceneId(name || config.scene);
     if (!next) return;
     sky?.dispose?.();
     sky = null;
     config.scene = next;
     applySceneTune(next);
-    themeMod = await loadTheme(next);
-    vibe?.setThemeModule?.(themeMod);
-    vibe?.setScene?.(next);
-    sky = createScene(next, config, themeMod);
-    await syncFlyers();
+    try {
+      themeMod = await loadTheme(next);
+      vibe?.setThemeModule?.(themeMod);
+      vibe?.setScene?.(next);
+      sky = createScene(next, config, themeMod);
+      await syncFlyers();
+    } catch (error) {
+      reportError(`scene:${next}`, error);
+      if (next !== 'aurora') {
+        config.scene = 'aurora';
+        applySceneTune('aurora');
+        themeMod = null;
+        vibe?.setThemeModule?.(null);
+        vibe?.setScene?.('aurora');
+        sky = createScene('aurora', config, null);
+        flyers?.dispose?.();
+        flyers = null;
+      }
+    }
     applyRung(rung, { force: true });
     resize();
     paintRack();

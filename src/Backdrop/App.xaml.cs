@@ -3,6 +3,7 @@ using System.Windows.Threading;
 using Backdrop.Interop;
 using Backdrop.Startup;
 using Backdrop.Tray;
+using Backdrop.Shell;
 
 // WinForms is referenced for the tray icon, and it brings its own Application type.
 using Application = System.Windows.Application;
@@ -26,6 +27,12 @@ public partial class App : Application
 
         var options = CommandLineOptions.Parse(e.Args);
 
+        if (options.ScreensaverPreview)
+        {
+            Shutdown();
+            return;
+        }
+
         if (options.ShowHelp)
         {
             MessageBox.Show(CommandLineOptions.Usage, "Backdrop", MessageBoxButton.OK, MessageBoxImage.Information);
@@ -42,11 +49,15 @@ public partial class App : Application
             return;
         }
 
-        _instance = new Mutex(true, InstanceMutexName, out bool isFirst);
+        string mutexName = options.ScreensaverRun ? InstanceMutexName + ".Screensaver" : InstanceMutexName;
+        _instance = new Mutex(true, mutexName, out bool isFirst);
         if (!isFirst)
         {
-            MessageBox.Show("Backdrop is already running. Look for it in the notification area.",
-                "Backdrop", MessageBoxButton.OK, MessageBoxImage.Information);
+            if (!options.QuietIfRunning)
+            {
+                MessageBox.Show("Backdrop is already running. Look for it in the notification area.",
+                    "Backdrop", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
             Shutdown();
             return;
         }
@@ -71,6 +82,11 @@ public partial class App : Application
             await _host.StartAsync();
             _tray = new TrayMenu(_host);
             _tray.Install();
+            ShellIntegration.Register();
+            if (options.OpenConsole)
+            {
+                _ = Dispatcher.BeginInvoke(DispatcherPriority.ApplicationIdle, new Action(() => _host.OpenConsole()));
+            }
         }
         catch (Exception ex)
         {

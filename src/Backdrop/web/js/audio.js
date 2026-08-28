@@ -91,6 +91,79 @@ export function createLowVibe(volume = LEVEL, sceneId = 'aurora') {
     return o;
   }
 
+  // Two-oscillator low pad — world themes call api.bed(freqA, freqB, level).
+  function bed(freqA, freqB, level) {
+    const a = osc('sine', freqA);
+    const b = osc('sine', freqB);
+    const g = gain(level);
+    a.connect(g);
+    b.connect(g);
+    g.connect(master);
+    return g;
+  }
+
+  // Filtered brown-noise wash — api.tide(level).
+  function tide(level) {
+    const src = noise('brown');
+    const lp = filter('lowpass', 220, 0.7);
+    const g = gain(level);
+    src.connect(lp);
+    lp.connect(g);
+    g.connect(master);
+    lfo(0.045, 60, lp.frequency);
+    return g;
+  }
+
+  const GALAXY_IDS = new Set([
+    'night-field', 'farfield', 'solarsystem', 'starnode', 'globule',
+  ]);
+  const GALAXY_STREAMS = [
+    'https://ice4.somafm.com/deepspaceone-128-mp3',
+    'https://ice2.somafm.com/deepspaceone-128-mp3',
+    'https://ice1.somafm.com/deepspaceone-128-mp3',
+  ];
+  let streamEl = null;
+  let streamIdx = 0;
+  let streamWanted = false;
+
+  function stopStream() {
+    streamWanted = false;
+    if (!streamEl) return;
+    try { streamEl.pause(); } catch { /* */ }
+    try { streamEl.removeAttribute('src'); streamEl.load(); } catch { /* */ }
+    streamEl.remove();
+    streamEl = null;
+  }
+
+  function playStream(url) {
+    streamWanted = true;
+    const src = url || GALAXY_STREAMS[streamIdx % GALAXY_STREAMS.length];
+    if (streamEl && streamEl.dataset.src === src) {
+      streamEl.volume = target;
+      if (playing) streamEl.play()?.catch(() => {});
+      return;
+    }
+    stopStream();
+    streamWanted = true;
+    const el = document.createElement('audio');
+    el.id = 'backdrop-galaxy-stream';
+    el.dataset.src = src;
+    el.preload = 'auto';
+    el.crossOrigin = 'anonymous';
+    el.setAttribute('playsinline', '');
+    el.style.cssText = 'position:fixed;width:0;height:0;opacity:0;pointer-events:none;left:-9999px';
+    el.volume = target;
+    el.src = src;
+    el.addEventListener('error', () => {
+      if (!streamWanted) return;
+      streamIdx = (streamIdx + 1) % GALAXY_STREAMS.length;
+      if (GALAXY_STREAMS[streamIdx] !== src) playStream(GALAXY_STREAMS[streamIdx]);
+    });
+    document.body.appendChild(el);
+    streamEl = el;
+    if (playing) el.play()?.catch(() => {});
+  }
+
   function everyRandom(minMs, maxMs, fn) {
     let id = 0;
     const loop = () => {
@@ -141,115 +214,6 @@ export function createLowVibe(volume = LEVEL, sceneId = 'aurora') {
     startTracked();
   }
 
-  function buildKelp() {
-    const a = osc('sine', 36.7);
-    const b = osc('sine', 48.9);
-    const pad = gain(0.11);
-    a.connect(pad);
-    b.connect(pad);
-    const padLp = filter('lowpass', 190, 0.7);
-    pad.connect(padLp);
-    padLp.connect(master);
-
-    const wash = noise('brown');
-    const washLp = filter('lowpass', 260, 0.8);
-    const washGain = gain(0.28);
-    wash.connect(washLp);
-    washLp.connect(washGain);
-    washGain.connect(master);
-    lfo(0.05, 70, washLp.frequency);
-
-    startTracked();
-
-    everyRandom(380, 2200, () => {
-      if (!ctx || !playing) return;
-      const now = ctx.currentTime;
-      const o = ctx.createOscillator();
-      const g = ctx.createGain();
-      o.type = 'sine';
-      const startF = 620 + Math.random() * 520;
-      o.frequency.setValueAtTime(startF, now);
-      o.frequency.exponentialRampToValueAtTime(140 + Math.random() * 80, now + 0.18);
-      g.gain.setValueAtTime(0.07, now);
-      g.gain.exponentialRampToValueAtTime(0.0001, now + 0.22);
-      o.connect(g);
-      g.connect(master);
-      o.start(now);
-      o.stop(now + 0.28);
-      o.onended = () => { try { o.disconnect(); g.disconnect(); } catch { /* */ } };
-    });
-  }
-
-  function buildMurmur() {
-    const air = noise('pink');
-    const airHp = filter('highpass', 900, 0.6);
-    const rustle = filter('bandpass', 1750, 1.1);
-    const rustleGain = gain(0.14);
-    air.connect(airHp);
-    airHp.connect(rustle);
-    rustle.connect(rustleGain);
-    rustleGain.connect(master);
-
-    const trem = osc('sine', 9.2);
-    const tremGain = gain(0.09);
-    trem.connect(tremGain);
-    tremGain.connect(rustleGain.gain);
-    lfo(0.13, 1.6, trem.frequency);
-
-    const loft = noise('white');
-    const loftBp = filter('bandpass', 2600, 0.9);
-    const loftGain = gain(0.05);
-    loft.connect(loftBp);
-    loftBp.connect(loftGain);
-    loftGain.connect(master);
-
-    const bed = osc('sine', 61.7);
-    const bedGain = gain(0.05);
-    bed.connect(bedGain);
-    bedGain.connect(master);
-
-    startTracked();
-  }
-
-  function buildEmber() {
-    const hiss = noise('pink');
-    const hp = filter('highpass', 900, 0.7);
-    const bp = filter('bandpass', 1800, 0.8);
-    const g = gain(0.12);
-    hiss.connect(hp);
-    hp.connect(bp);
-    bp.connect(g);
-    g.connect(master);
-    lfo(0.21, 0.04, g.gain);
-
-    const bed = osc('sine', 46);
-    const bedG = gain(0.05);
-    bed.connect(bedG);
-    bedG.connect(master);
-    startTracked();
-
-    everyRandom(180, 900, () => {
-      if (!ctx || !playing) return;
-      const now = ctx.currentTime;
-      const src = ctx.createBufferSource();
-      const buf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * 0.05), ctx.sampleRate);
-      fillNoise(buf.getChannelData(0), 'white');
-      src.buffer = buf;
-      const f = ctx.createBiquadFilter();
-      f.type = 'bandpass';
-      f.frequency.value = 1200 + Math.random() * 2400;
-      f.Q.value = 2.2;
-      const gg = ctx.createGain();
-      gg.gain.setValueAtTime(0.08, now);
-      gg.gain.exponentialRampToValueAtTime(0.0001, now + 0.08);
-      src.connect(f);
-      f.connect(gg);
-      gg.connect(master);
-      src.start(now);
-      src.stop(now + 0.1);
-    });
-  }
-
   function buildIon() {
     const a = osc('sine', 73.4);
     const b = osc('sine', 110.1);
@@ -286,22 +250,68 @@ export function createLowVibe(volume = LEVEL, sceneId = 'aurora') {
     startTracked();
   }
 
+
+  function buildGlyphfall() {
+    const bed = osc('sine', 49);
+    const bedG = gain(0.04);
+    bed.connect(bedG);
+    bedG.connect(master);
+
+    const rain = noise('brown');
+    const hp = filter('highpass', 420, 0.6);
+    const lp = filter('lowpass', 1400, 0.8);
+    const rg = gain(0.09);
+    rain.connect(hp);
+    hp.connect(lp);
+    lp.connect(rg);
+    rg.connect(master);
+    lfo(0.09, 0.025, rg.gain);
+
+    const ticks = noise('white');
+    const bp = filter('bandpass', 3200, 6);
+    const tg = gain(0.03);
+    ticks.connect(bp);
+    bp.connect(tg);
+    tg.connect(master);
+
+    startTracked();
+
+    everyRandom(260, 1400, () => {
+      if (!ctx || !playing) return;
+      const now = ctx.currentTime;
+      const o = ctx.createOscillator();
+      const g = ctx.createGain();
+      o.type = 'square';
+      o.frequency.value = 880 + Math.random() * 1600;
+      g.gain.setValueAtTime(0.035, now);
+      g.gain.exponentialRampToValueAtTime(0.0001, now + 0.05);
+      o.connect(g);
+      g.connect(master);
+      o.start(now);
+      o.stop(now + 0.06);
+      o.onended = () => { try { o.disconnect(); g.disconnect(); } catch { /* */ } };
+    });
+  }
+
   function themeApi() {
-    return { ctx, master, osc, noise, filter, gain, lfo, startTracked, everyRandom };
+    return { ctx, master, osc, noise, filter, gain, lfo, bed, tide, playStream, stopStream, startTracked, everyRandom };
   }
 
   function buildFor(id) {
     clearGraph();
-    if (themeMod?.buildAudio) {
-      themeMod.buildAudio(themeApi());
-      return;
+    const galaxy = GALAXY_IDS.has(id) || Boolean(themeMod?.galaxyStream);
+    if (!galaxy) stopStream();
+    try {
+      if (themeMod?.buildAudio) themeMod.buildAudio(themeApi());
+      else if (id === 'ion') buildIon();
+      else if (id === 'warpscii') buildStarwell();
+      else if (id === 'glyphfall') buildGlyphfall();
+      else buildDrone();
+    } catch (error) {
+      console.warn('theme audio failed', id, error);
+      try { buildDrone(); } catch { /* */ }
     }
-    if (id === 'kelp') buildKelp();
-    else if (id === 'murmur') buildMurmur();
-    else if (id === 'ember') buildEmber();
-    else if (id === 'ion') buildIon();
-    else if (id === 'starwell' || id === 'warpscii') buildStarwell();
-    else buildDrone();
+    if (galaxy) playStream(themeMod?.galaxyStream || GALAXY_STREAMS[streamIdx % GALAXY_STREAMS.length]);
   }
 
   return {
@@ -325,6 +335,10 @@ export function createLowVibe(volume = LEVEL, sceneId = 'aurora') {
       master.gain.setValueAtTime(master.gain.value, now);
       master.gain.linearRampToValueAtTime(target, now + 1.8);
       playing = true;
+      if (streamEl) {
+        streamEl.volume = target;
+        streamEl.play()?.catch(() => {});
+      }
     },
     stop() {
       if (!playing || !master) return;
@@ -333,6 +347,7 @@ export function createLowVibe(volume = LEVEL, sceneId = 'aurora') {
       master.gain.setValueAtTime(master.gain.value, now);
       master.gain.linearRampToValueAtTime(0, now + 0.5);
       playing = false;
+      try { streamEl?.pause(); } catch { /* */ }
     },
     setThemeModule(mod) {
       themeMod = mod ?? null;
@@ -356,6 +371,7 @@ export function createLowVibe(volume = LEVEL, sceneId = 'aurora') {
         master.gain.setValueAtTime(master.gain.value, now);
         master.gain.linearRampToValueAtTime(target, now + 0.2);
       }
+      if (streamEl) streamEl.volume = target;
     },
     setEnabled(on) {
       if (!on) this.stop();
@@ -363,6 +379,7 @@ export function createLowVibe(volume = LEVEL, sceneId = 'aurora') {
     dispose() {
       for (const cancel of cancels) cancel();
       cancels = [];
+      stopStream();
       try { ctx?.close(); } catch { /* already closed */ }
       ctx = null;
       master = null;

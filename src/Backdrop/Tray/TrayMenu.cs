@@ -4,6 +4,7 @@ using System.Drawing.Drawing2D;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
 using Backdrop.Startup;
+using Backdrop.Shell;
 using Application = System.Windows.Application;
 
 namespace Backdrop.Tray;
@@ -47,14 +48,31 @@ internal sealed class TrayMenu : IDisposable
         _layoutMenu.DropDownItems.Add(_spanItem);
         _layoutMenu.DropDownItems.Add(_duplicateItem);
 
+        var startupItem = new ToolStripMenuItem("Start with Windows", null, (_, _) =>
+        {
+            bool next = !ShellIntegration.IsStartupEnabled();
+            ShellIntegration.SetStartup(next);
+        });
+        menu.Opening += (_, _) => { startupItem.Checked = ShellIntegration.IsStartupEnabled(); };
+
         menu.Items.Add(_modeItem);
         menu.Items.Add(_layoutMenu);
+        menu.Items.Add(startupItem);
+        menu.Items.Add(new ToolStripMenuItem("Windows background settings", null, (_, _) =>
+            ShellIntegration.OpenWindowsBackgroundSettings()));
         menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add(new ToolStripMenuItem("Reload scene", null, (_, _) => _host.ReloadScene()));
         menu.Items.Add(new ToolStripMenuItem("Open scene folder", null, (_, _) => _host.OpenSceneFolder()));
         menu.Items.Add(new ToolStripMenuItem("Open DevTools", null, (_, _) => _host.OpenDevTools()));
         menu.Items.Add(new ToolStripMenuItem("Open log", null, (_, _) => _host.OpenLog()));
         menu.Items.Add(new ToolStripMenuItem("Copy diagnostics", null, (_, _) => _host.CopyDiagnostics()));
+        menu.Items.Add(new ToolStripSeparator());
+        menu.Items.Add(new ToolStripMenuItem("Open Comms (Win+C / Ctrl+Alt+C)", null, (_, _) =>
+        {
+            var d = Application.Current?.Dispatcher;
+            if (d is null || d.CheckAccess()) _host.ToggleComms();
+            else d.BeginInvoke(() => _host.ToggleComms());
+        }));
         menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add(new ToolStripMenuItem("Quit Backdrop", null, (_, _) => Application.Current.Shutdown()));
         menu.Items.Add(new ToolStripMenuItem("Kill Backdrop", null, (_, _) =>

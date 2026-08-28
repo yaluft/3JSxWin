@@ -33,5 +33,6 @@ internal static class Log
         }
     }
 
-    internal static void Write(string context, Exception ex) => Write($"{context}: {ex.GetType().Name}: {ex.Message}");
+    internal static void Write(string context, Exception ex) =>
+        Write($"{context}: {ex.GetType().Name}: {ex.Message}{Environment.NewLine}{ex.StackTrace}");
 }

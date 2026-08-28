@@ -31,7 +31,19 @@ internal static class NativeMethods
     /// <summary>Top of the sibling z-order: used briefly so the panel sits over the icons.</summary>
     internal static readonly IntPtr HWND_TOP = new(0);
 
+    /// <summary>Always-on-top of every non-topmost window. Comms / console sit here.</summary>
+    internal static readonly IntPtr HWND_TOPMOST = new(-1);
+
     internal const long WS_EX_TRANSPARENT = 0x00000020L;
+
+    internal const uint WM_NCLBUTTONDOWN = 0x00A1;
+    internal const int HTCAPTION = 2;
+
+    [DllImport("user32.dll")]
+    internal static extern bool ReleaseCapture();
+
+    [DllImport("user32.dll")]
+    internal static extern IntPtr SendMessage(IntPtr hWnd, uint Msg, IntPtr wParam, IntPtr lParam);
 
     /// <summary>Undocumented Progman message that forces the WorkerW wallpaper layer to exist.</summary>
     internal const uint WM_SPAWN_WORKER = 0x052C;

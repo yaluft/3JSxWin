@@ -39,7 +39,9 @@ export function isInstalled(id) {
 }
 
 export function activeIds() {
-  const extra = catalog.map((t) => t.id).filter((id) => installed.has(id));
+  const extra = catalog
+    .map((t) => t.id)
+    .filter((id) => installed.has(id) && !CORE_IDS.includes(id));
   return [...CORE_IDS, ...extra];
 }
 
@@ -48,12 +50,29 @@ export function resolveSceneId(id) {
   return 'aurora';
 }
 
+/** Catalog ids requested via ?scene= or config.scene must be installed or they boot as Aurora. */
+export function ensureInstalled(id) {
+  if (!id || CORE_IDS.includes(id)) return false;
+  if (!catalog.some((t) => t.id === id)) return false;
+  if (installed.has(id)) return false;
+  installed.add(id);
+  setActiveSceneIds(activeIds());
+  return true;
+}
+
 export async function loadTheme(id) {
   if (!id || CORE_IDS.includes(id)) return null;
   if (cache.has(id)) return cache.get(id);
   if (!installed.has(id)) return null;
   try {
-    const mod = await import(`../themes/${id}/theme.js`);
+    // Absolute URL from this module: WebView2 virtual-host mapping is picky about
+    // relative dynamic import() specifiers (Chrome is not).
+    const href = new URL(`../themes/${id}/theme.js`, import.meta.url).href;
+    const mod = await import(href);
+    if (!mod?.fragment) {
+      console.warn('theme has no fragment', id);
+      return null;
+    }
     cache.set(id, mod);
     if (mod.meta) mergeSceneMeta(mod.id ?? id, mod.meta);
     return mod;

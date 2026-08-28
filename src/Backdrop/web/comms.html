@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="color-scheme" content="dark" />
+  <title>Comms</title>
+  <link rel="stylesheet" href="./comms.css?v=8" />
+</head>
+<body>
+  <header class="bar" id="drag">
+    <span class="mark">●</span>
+    <span>COMMS</span>
+    <select id="model" title="Switch model" aria-label="Model">
+      <option value="llama-70b">llama-70b</option>
+    </select>
+    <button type="button" id="newchat" title="New chat">NEW</button>
+    <button type="button" id="close" title="Close">✕</button>
+  </header>
+  <p class="meta" id="meta">NO CARRIER</p>
+  <ol class="log" id="log"></ol>
+  <ul class="chips" id="chips" hidden></ul>
+  <form class="compose" id="form">
+    <input id="file" type="file" multiple hidden />
+    <button type="button" id="attach" title="Attach files">📎</button>
+    <button type="button" id="imagine" title="Generate an image">IMG</button>
+    <input id="input" type="text" autocomplete="off" spellcheck="false" placeholder="transmit…  /imagine a nebula" />
+    <button type="submit">SEND</button>
+  </form>
+  <script type="module" src="./js/comms.js?v=8"></script>
+</body>
+</html>

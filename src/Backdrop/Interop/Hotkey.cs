@@ -9,6 +9,7 @@ namespace Backdrop.Interop;
 ///
 /// The chord is Ctrl+Alt+B by default. Each press toggles the on-scene console: the host
 /// opens it and pins the scene interactive, or closes it and hands input back to the desktop.
+/// Win+C toggles Comms and is swallowed so Copilot does not also open.
 /// Win+Shift+- triggers a dev-loop rebuild-and-relaunch instead.
 /// </summary>
 internal sealed class Hotkey : IDisposable
@@ -16,6 +17,8 @@ internal sealed class Hotkey : IDisposable
     private const int WH_KEYBOARD_LL = 13;
     private const int WM_KEYDOWN = 0x0100;
     private const int WM_SYSKEYDOWN = 0x0104;
+    private const int WM_KEYUP = 0x0101;
+    private const int WM_SYSKEYUP = 0x0105;
 
     private const int VK_CONTROL = 0x11;
     private const int VK_MENU = 0x12; // Alt
@@ -23,6 +26,7 @@ internal sealed class Hotkey : IDisposable
     private const int VK_LWIN = 0x5B;
     private const int VK_RWIN = 0x5C;
     private const int VK_TRIGGER = 0x42; // 'B'
+    private const int VK_C = 0x43;
     private const int VK_OEM_4 = 0xDB; // [
     private const int VK_OEM_6 = 0xDD; // ]
     private const int VK_P = 0x50;
@@ -60,11 +64,13 @@ internal sealed class Hotkey : IDisposable
     private readonly Action _onPressed;
     private readonly Action<string> _onScene;
     private readonly Action _onRebuild;
+    private readonly Action _onComms;
     private IntPtr _hook;
 
     // Auto-repeat sends a stream of WM_KEYDOWNs while the key is held; only the first,
     // where the trigger was not already down, should count as a press.
     private bool _triggerDown;
+    private bool _commsAltDown;
     private uint _winChord;
 
     /// <param name="onPressed">
@@ -73,11 +79,13 @@ internal sealed class Hotkey : IDisposable
     /// </param>
     /// <param name="onScene">Win+[ prev, Win+] next, Win+P shuffle.</param>
     /// <param name="onRebuild">Win+Shift+-. Also fires on a system thread.</param>
-    internal Hotkey(Action onPressed, Action<string>? onScene = null, Action? onRebuild = null)
+    /// <param name="onComms">Win+C. The hook eats the chord so Copilot does not open.</param>
+    internal Hotkey(Action onPressed, Action<string>? onScene = null, Action? onRebuild = null, Action? onComms = null)
     {
         _onPressed = onPressed;
         _onScene = onScene ?? (_ => { });
         _onRebuild = onRebuild ?? (() => { });
+        _onComms = onComms ?? (() => { });
         _proc = HookCallback;
     }
 
@@ -95,6 +103,34 @@ internal sealed class Hotkey : IDisposable
             var data = Marshal.PtrToStructure<KBDLLHOOKSTRUCT>(lParam);
 
             bool down = msg is WM_KEYDOWN or WM_SYSKEYDOWN;
+            bool up = msg is WM_KEYUP or WM_SYSKEYUP;
+
+            // Win+C — steal from Copilot. Eat down and up so the shell never sees the chord.
+            if (data.vkCode == VK_C && WinHeld() && !Held(VK_CONTROL) && !Held(VK_MENU) && !Held(VK_SHIFT))
+            {
+                if (down && _winChord != VK_C)
+                {
+                    _winChord = VK_C;
+                    _onComms();
+                }
+                if (up && _winChord == VK_C) _winChord = 0;
+                return (IntPtr)1;
+            }
+
+            // Ctrl+Alt+C — same toggle if Win+C is owned by something else.
+            if (data.vkCode == VK_C && !WinHeld() && Held(VK_CONTROL) && Held(VK_MENU) && !Held(VK_SHIFT))
+            {
+                if (down && !_commsAltDown)
+                {
+                    _commsAltDown = true;
+                    _onComms();
+                }
+                else if (!down)
+                {
+                    _commsAltDown = false;
+                }
+            }
+
             if (data.vkCode == VK_TRIGGER)
             {
                 if (down && !_triggerDown)

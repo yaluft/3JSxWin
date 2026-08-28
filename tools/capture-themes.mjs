@@ -17,9 +17,7 @@ const WEB = join(ROOT, 'src', 'Backdrop', 'web');
 const CONFIG = join(WEB, 'config.json');
 const OUT = join(ROOT, 'docs', 'themes');
 const DEFAULT_THEMES = [
-  'mycelight', 'mothwork', 'coralnet', 'lungclock',
-  'inkatrium', 'foldwell', 'sporehall', 'orreryheart', 'threadloom',
-  'deep-field',
+  'farfield', 'solarsystem', 'night-field', 'starnode', 'globule',
 ];
 const THEMES = process.argv.slice(2).filter(Boolean);
 const IDS = THEMES.length ? THEMES : DEFAULT_THEMES;

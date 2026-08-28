@@ -208,6 +208,7 @@ export const ASCII_DEFAULTS = {
   terrascii: { cellPx: 6, minCols: 80, maxCols: 480 },
   warpscii: { cellPx: 6, minCols: 80, maxCols: 480 },
   blobscii: { cellPx: 6, minCols: 80, maxCols: 480 },
+  glyphfall: { cellPx: 8, minCols: 64, maxCols: 360 },
 };
 
 export const ASCII_SCENE_IDS = new Set(Object.keys(ASCII_DEFAULTS));
