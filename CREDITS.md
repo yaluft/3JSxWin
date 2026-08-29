@@ -39,6 +39,10 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 - **[Microsoft.Web.WebView2](https://learn.microsoft.com/microsoft-edge/webview2/)** —
   the Chromium host. Pulled from NuGet at build time.
 
+- **[Nasa](https://nasa.gov)** ([astronomy picture of the day archive](https://apod.nasa.gov/apod/archivepix.html))
+  some of the newest additions will be based on the astronomy picture of the day depending on the picture itself. these will be generated inside a themes folder in the themes contrib branch but still installable per user preference. this is a developmental feature 
+   - [images](assets/pictures)
+
 ## Prior art
 
 The `WorkerW` re-parenting technique is folklore that predates all of us. Wallpaper
