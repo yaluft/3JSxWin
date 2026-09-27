@@ -20,3 +20,6 @@ Optional (ship in `web/themes/`, load after install):
 | night-field | Night Field | [night-field.png](night-field.png) |
 | starnode | Star Node | — |
 | solarsystem | Solar System | — |
+| cosmiccliffs | Cosmic Cliffs | — |
+| pillars | Pillars of Creation | — |
+| southring | Southern Ring | — |

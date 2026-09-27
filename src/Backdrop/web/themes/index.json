@@ -1,9 +1,112 @@
 {
   "themes": [
-    { "id": "farfield", "label": "Farfield", "blurb": "A quiet star field — small worlds adrift, no nebula, no glow", "family": "world" },
-    { "id": "solarsystem", "label": "Solar System", "blurb": "A glowing central star with orbiting worlds, planetary rings, and asteroid belt", "family": "world" },
-    { "id": "night-field", "label": "Night Field", "blurb": "A dark sky of sharp stars, distant nebulae and planets — sprinkling, no glow", "family": "world" },
-    { "id": "starnode", "label": "Star Node", "blurb": "A stellar neighborhood — suns as linked nodes, one local system turning among them", "family": "world" },
-    { "id": "globule", "label": "Globule", "blurb": "A globular cluster — twin cores, a halo of worlds, meteors, pulsar sweep", "family": "world" }
+    {
+      "id": "farfield",
+      "label": "Farfield",
+      "blurb": "A quiet star field — small worlds adrift, no nebula, no glow",
+      "family": "world"
+    },
+    {
+      "id": "solarsystem",
+      "label": "Solar System",
+      "blurb": "A glowing central star with orbiting worlds, planetary rings, and asteroid belt",
+      "family": "world"
+    },
+    {
+      "id": "night-field",
+      "label": "Night Field",
+      "blurb": "A dark sky of sharp stars, distant nebulae and planets — sprinkling, no glow",
+      "family": "world"
+    },
+    {
+      "id": "starnode",
+      "label": "Star Node",
+      "blurb": "A stellar neighborhood — suns as linked nodes, one local system turning among them",
+      "family": "world"
+    },
+    {
+      "id": "globule",
+      "label": "Globule",
+      "blurb": "A globular cluster — twin cores, a halo of worlds, meteors, pulsar sweep",
+      "family": "world"
+    },
+    {
+      "id": "webbmirror",
+      "label": "Webb Mirror",
+      "blurb": "A JWST deep field — hex-bokeh stars, six diffraction spikes, ten thousand golden galaxies",
+      "family": "world"
+    },
+    {
+      "id": "lensfield",
+      "label": "Gravitational Lens",
+      "blurb": "A JWST frontier field — a cluster warping spacetime, galaxies smeared into Einstein arcs",
+      "family": "world"
+    },
+    {
+      "id": "nircam",
+      "label": "FS Tau",
+      "blurb": "Protostars sparking to life — golden spike heroes, blue gas ridges, rust dust, a galaxy field behind gas",
+      "family": "world"
+    },
+    {
+      "id": "starburst",
+      "label": "Centaurus A",
+      "blurb": "Webb MIRI on a collision-shaped galaxy — beaded violet dust lane, blown-out shells, rose loops",
+      "family": "world"
+    },
+    {
+      "id": "saucer",
+      "label": "Sombrero",
+      "blurb": "Messier 104 edge-on — thin ring-gap lavender disk, cream nucleus, X-ray teal sources in a dusty veil",
+      "family": "world"
+    },
+    {
+      "id": "lionshead",
+      "label": "Lion's Head",
+      "blurb": "A planetary nebula — pink inner lobes, a combed blue halo, gold knots, an orange galaxy field",
+      "family": "world"
+    },
+    {
+      "id": "eclipsepair",
+      "label": "Eclipse Pair",
+      "blurb": "Two eclipses facing each other — a streaming corona and diamond ring meeting a copper-shadowed Moon across a bridge of light",
+      "family": "world"
+    },
+    {
+      "id": "spikehero",
+      "label": "Spike Hero",
+      "blurb": "A JWST nursery — one blazing six-spike star crossing the frame, blue gas sheets, rust dust, a crescent arc",
+      "family": "world"
+    },
+    {
+      "id": "coldlens",
+      "label": "Cold Lens",
+      "blurb": "An edge-on starburst — icy blue dust lanes spanning the frame, a magenta core, salmon filament loops",
+      "family": "world"
+    },
+    {
+      "id": "orionhall",
+      "label": "Orion Hall",
+      "blurb": "Snow ridges under Orion — a crimson loop, the nebula burning, comets, meteors and distant dying stars",
+      "family": "world"
+    },
+    {
+      "id": "cosmiccliffs",
+      "label": "Cosmic Cliffs",
+      "blurb": "NGC 3324 Carina — an amber gas escarpment, a thumb peak, steam off the ridge, NIRCam spike stars",
+      "family": "world"
+    },
+    {
+      "id": "pillars",
+      "label": "Pillars of Creation",
+      "blurb": "M16 Eagle — three rusty spires in a packed starfield, red-tipped ejections, NIRCam spikes",
+      "family": "world"
+    },
+    {
+      "id": "southring",
+      "label": "Southern Ring",
+      "blurb": "NGC 3132 — a 3D hollow shell, cyan cavity, gold rings, radial spokes, a binary at the heart",
+      "family": "world"
+    }
   ]
 }

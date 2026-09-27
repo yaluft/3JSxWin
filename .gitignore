@@ -48,3 +48,4 @@ suggests/
 site/public/scene_backup*/
 src/themes/
 groks-REV*.MD
+.zcode/

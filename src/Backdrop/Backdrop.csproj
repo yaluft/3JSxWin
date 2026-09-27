@@ -3,6 +3,11 @@
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <TargetFramework>net8.0-windows</TargetFramework>
+    <!-- Shows up in the exe's VersionInfo, which installer.ps1 surfaces in the
+         Add/Remove-Programs entry. Bump alongside a release. -->
+    <Version>2.1.0</Version>
+    <ProductName>Win11Backdrop</ProductName>
+    <Company>3JSxWin</Company>
     <UseWPF>true</UseWPF>
     <UseWindowsForms>true</UseWindowsForms>
     <Nullable>enable</Nullable>

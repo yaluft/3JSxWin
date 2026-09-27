@@ -1,28 +1,69 @@
 <!doctype html>
+<!--
+  index.html — the scene page. This is what the C# host loads into the wallpaper
+  WebView2 (and into the little preview iframes in Settings). It is deliberately
+  almost empty: a canvas, two hidden text nodes, and the module script. Every
+  pixel you see is drawn by main.js in WebGL — the DOM is just scaffolding.
+-->
 <html lang="en">
 <head>
+  <!-- The doctype on line 1 is not decoration: it forces standards mode.
+       Without it WebView2 falls into quirks mode and box-sizing / 100% height
+       on the html and body elements stop behaving, breaking the full-bleed canvas. -->
   <meta charset="utf-8" />
+  <!-- viewport-fit=cover so the page paints under any rounded corners / notch
+       area — a wallpaper must reach every edge of the display. -->
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <!-- The scene is always dark. Telling the UA up front stops a one-frame white
+       flash of form-control / scrollbar chrome before our CSS lands. -->
   <meta name="color-scheme" content="dark" />
   <title>Backdrop</title>
+  <!-- Favicon is an inline data: URI (the void-coloured square with a green
+       aurora stroke) so the page pulls zero extra network requests. It only
+       ever shows in the dev browser tab; the real wallpaper has no tab. -->
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%2304060c'/%3E%3Cpath d='M3 22 Q12 12 22 20 T29 12' stroke='%2335e3a0' stroke-width='3' fill='none'/%3E%3C/svg%3E" />
-  <link rel="stylesheet" href="./style.css?v=8" />
+  <!-- Styles live entirely in style.css — there is NO inline critical CSS here.
+       That is on purpose: this page is served from local disk by WebView2, so
+       there is no network round-trip to hide, and inlining would just be a
+       second copy to keep in sync. The ?v=8 is the same cache-buster every
+       local asset carries (see config.js) — WebView2 caches hard, so bump the
+       integer to force a reload after an edit. -->
+  <link rel="stylesheet" href="./style.css?v=9" />
+  <!-- Import map: lets every module write `import ... from 'three'` instead of a
+       long relative path, and pins "three" to our vendored copy so nothing can
+       reach for a CDN (there is no network out here anyway). -->
   <script type="importmap">
-    { "imports": { "three": "./vendor/three.module.js" } }
+    { "imports": { "three": "./vendor/three.module.js", "tone": "./vendor/Tone.js" } }
   </script>
 </head>
 <body>
+  <!-- The one thing main.js renders into. It grabs this by id ("stage"),
+       creates a single THREE.WebGLRenderer on it, and CSS (#stage in style.css)
+       pins it to inset:0 so it fills the viewport. aria-hidden because it is
+       pure decoration — a screen reader has nothing to say about a moving sky. -->
   <canvas id="stage" aria-hidden="true"></canvas>
 
+  <!-- Optional on-screen clock. Ships hidden; hud.js (created by main.js) unhides
+       it and fills these nodes only when config.hud.enabled is true. The dashes
+       in the time node are just a placeholder so nothing reflows when the real
+       time drops in. -->
   <div class="hud" id="hud" hidden>
     <p class="hud__time" id="hudTime">--:--</p>
     <p class="hud__date" id="hudDate"></p>
   </div>
 
+  <!-- Last-resort message if WebGL never comes up (dead driver, blocked context).
+       main.js's boot().catch() unhides this; style.css gives it a static look so
+       the desktop still shows *something* readable instead of a black void. -->
   <p class="fallback" id="fallback" hidden>
     The scene needs WebGL. Update your graphics driver, then reload from the Backdrop tray icon.
   </p>
 
-  <script type="module" src="./js/main.js?v=27"></script>
+  <!-- The whole app. type="module" gives us ESM (so the import map above works)
+       and defers execution until the DOM is parsed, so main.js can safely
+       getElementById('stage') on its first line. ?v=28 is the cache-buster —
+       bump it whenever any file in the module graph changes, or WebView2 will
+       keep running the old bundle from its user-data cache. -->
+  <script type="module" src="./js/main.js?v=31"></script>
 </body>
 </html>

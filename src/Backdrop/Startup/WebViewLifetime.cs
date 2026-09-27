@@ -11,8 +11,11 @@ namespace Backdrop.Startup;
 /// </summary>
 internal static class WebViewLifetime
 {
+    // We stash the browser pid in a tiny text file next to the log so the NEXT
+    // process (a different run) can find and kill it.
     private static string PidPath => Path.Combine(Log.Folder, "webview.pid");
 
+    // Called once after the WebView2 environment comes up, with its browser pid.
     internal static void Remember(uint pid)
     {
         if (pid == 0) return;
@@ -27,6 +30,8 @@ internal static class WebViewLifetime
         }
     }
 
+    // Called during startup (App.OnStartup) once we know we're the only instance.
+    // Reads the stashed pid and kills that browser if it's still alive.
     internal static void ReapPrevious()
     {
         try
@@ -46,8 +51,14 @@ internal static class WebViewLifetime
         try
         {
             using var process = Process.GetProcessById(pid);
+
+            // Safety check: the pid may have been recycled by the OS onto some
+            // unrelated process. Only kill it if it's actually a WebView2 browser.
             if (!process.ProcessName.Contains("msedgewebview2", StringComparison.OrdinalIgnoreCase))
                 return;
+
+            // entireProcessTree: the browser spawns renderer/GPU child processes;
+            // kill the whole family or the children keep the window class alive.
             process.Kill(entireProcessTree: true);
             if (!process.WaitForExit(1500))
                 Log.Write($"WebView2 pid {pid} did not exit in time.");
@@ -56,7 +67,8 @@ internal static class WebViewLifetime
         }
         catch (ArgumentException)
         {
-            // already gone
+            // GetProcessById throws this when the pid is already gone — which is
+            // the happy path here, so just ignore it.
         }
         catch (Exception ex)
         {

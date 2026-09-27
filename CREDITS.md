@@ -28,6 +28,10 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 
 ## Third party
 
+- **[Tone.js](https://tonejs.github.io)** ([Tonejs/Tone.js](https://github.com/Tonejs/Tone.js))
+  15.1.22 — MIT. Vendored as a tree-shaken ESM bundle in `src/Backdrop/web/vendor/Tone.js`
+  so the wallpaper's interstellar bed (drones, wind, sparse phrases) stays fully offline.
+
 - **[three.js](https://threejs.org)** ([mrdoob/three.js](https://github.com/mrdoob/three.js))
   r185 — MIT. Vendored in `src/Backdrop/web/vendor/` rather than pulled from a CDN, so the
   scene works with no network at all. The scene's shader-quad, points field, and additive
@@ -39,9 +43,37 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 - **[Microsoft.Web.WebView2](https://learn.microsoft.com/microsoft-edge/webview2/)** —
   the Chromium host. Pulled from NuGet at build time.
 
-- **[Nasa](https://nasa.gov)** ([astronomy picture of the day archive](https://apod.nasa.gov/apod/archivepix.html))
-  some of the newest additions will be based on the astronomy picture of the day depending on the picture itself. these will be generated inside a themes folder in the themes contrib branch but still installable per user preference. this is a developmental feature 
-   - [images](assets/pictures)
+- **[NASA](https://nasa.gov)** ([Astronomy Picture of the Day archive](https://apod.nasa.gov/apod/archivepix.html))
+  — reference imagery for the optional space themes. NASA media is generally not
+  copyrighted and may be reused for any purpose; see NASA's
+  [media usage guidelines](https://www.nasa.gov/nasa-brand-center/images-and-media/).
+  Individual frames may carry a photographer or instrument-team credit, noted per image
+  below.
+
+  Nothing in `assets/images/` ships in the app. Each picture is a *visual reference* only:
+  a theme's fragment shader is hand-written to reproduce the structure of the image —
+  its geometry, palette and motion — so the scene stays a procedural WebGL shader with no
+  texture to load and no image redistributed. Themes derived this way live under
+  `src/Backdrop/web/themes/<id>/` and are opt-in per user from the Library card in
+  Settings.
+
+  Reference images in [`assets/images/`](assets/images):
+  - `lions_head_nebula.jpg` — a JWST planetary nebula (pink inner shell, blue outer
+    halo, radial spokes) — drives the **Lion's Head** theme.
+  - `EclipsePair.jpg` — a total solar eclipse paired with an eclipsed Moon. The
+    reference is a two-panel diptych; the theme deliberately fuses it into one
+    composition with the two bodies facing each other — drives the **Eclipse Pair**
+    theme.
+  - `55369225127_dc150b5db0_o.jpg` — a JWST NIRCam star-forming region dominated by one
+    six-spike hero star — drives the **Spike Hero** theme.
+  - `55377597821_c2549169e9_o.png` — a wide edge-on starburst galaxy (icy dust lanes,
+    magenta core, salmon filament loops) — drives the **Cold Lens** theme.
+  - `jwst-cosmic-cliffs.jpg` — NASA SVS print of Webb NIRCam *Cosmic Cliffs* in
+    NGC 3324 (Carina). Image: NASA, ESA, CSA, STScI — drives **Cosmic Cliffs**.
+  - `jwst-pillars.jpg` — Webb NIRCam *Pillars of Creation* in M16. Image: NASA,
+    ESA, CSA, STScI — drives **Pillars of Creation**.
+  - `jwst-southern-ring.png` — Webb NIRCam *Southern Ring Nebula* (NGC 3132).
+    Image: NASA, ESA, CSA, STScI — drives **Southern Ring**.
 
 ## Prior art
 

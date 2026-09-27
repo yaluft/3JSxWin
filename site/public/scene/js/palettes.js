@@ -1,5 +1,24 @@
-// Neovim colorscheme palettes, mapped onto Backdrop's five slots.
-// Hex values taken from the upstream GitHub repos cited on each entry.
+// palettes.js — the built-in colour-scheme catalogue.
+// A flat list of popular Neovim colorschemes, each squeezed into Backdrop's
+// five colour slots, plus helpers to look one up by id and to pick a random
+// one (used by the "cycle palette" hotkey in main.js). This file is pure data
+// + pure functions: no three.js, no DOM, no host bridge.
+//
+// The five-slot model. Every scene's shader (sky.js, ascii.js, motes.js...)
+// reads exactly these five vec3 uniforms, so a "palette" here is just five hex
+// strings. The names are THEMATIC, not positional — they describe the role the
+// colour plays in an aurora-over-water picture, and each scene is free to
+// interpret that loosely:
+//   void    — the deepest background, the near-black behind everything
+//   tide    — the low band just above the horizon / the dark water
+//   verdant — the aurora's low-altitude green (real auroras glow green low down)
+//   iris    — the aurora's high-altitude violet/magenta (red/violet up high)
+//   frost   — the brightest highlight: aurora tips, star colour, dust motes
+// Picking Neovim schemes means the whole thing already reads as a coherent
+// "dark editor" palette; we just relabel their bg/green/purple/fg roles.
+//
+// Hex values are copied verbatim from the upstream GitHub repos cited on each
+// entry, so anyone can diff them against the source colorscheme.
 
 export const PALETTES = [
   {
@@ -76,25 +95,47 @@ export const PALETTES = [
   },
 ];
 
+// Look up a catalogue entry by its id (e.g. 'tokyonight'). Returns null for
+// anything not in the list — including the two special names 'boreal' (the
+// hard-coded default in config.js) and 'custom' (the user's hand-picked set),
+// which live outside this catalogue. Callers treat null as "not a named
+// palette, leave config.palette alone".
 export function findPalette(id) {
   return PALETTES.find((entry) => entry.id === id) ?? null;
 }
 
+// Pick a random palette, skipping exceptId so a "next palette" hotkey never
+// lands on the one you're already showing. exceptId is usually the current
+// config.paletteName; if it's 'boreal'/'custom'/unknown, nothing is filtered
+// and you just get any entry. The `?? PALETTES[0]` guards the degenerate case
+// where the list somehow filtered down to empty.
 export function randomPalette(exceptId) {
   const pool = PALETTES.filter((entry) => entry.id !== exceptId);
   return pool[Math.floor(Math.random() * pool.length)] ?? PALETTES[0];
 }
 
+// Write a palette into the live config object, in place. This is the one spot
+// that knows a palette change also has to re-tint the dust motes.
 export function applyPaletteToConfig(config, entry) {
   config.paletteName = entry.id;
+
+  // 'custom' isn't in PALETTES — its colours live in config.customPalette,
+  // edited via the settings panel. Copy those in instead of entry.palette.
   if (entry.id === 'custom') {
     const custom = config.customPalette;
     if (custom) {
+      // Spread-merge rather than replace: keeps any slot the custom set
+      // happens to be missing at its previous value.
       config.palette = { ...config.palette, ...custom };
+      // motes.color has no slot of its own — it always shadows 'frost' so the
+      // floating dust matches the brightest highlight in the scene.
       if (config.motes) config.motes.color = custom.frost;
     }
     return config;
   }
+
+  // Normal named palette: merge its five slots over the live set, then point
+  // the motes at the new frost. Same frost-shadowing rule as above.
   config.palette = { ...config.palette, ...entry.palette };
   if (config.motes) config.motes.color = entry.palette.frost;
   return config;

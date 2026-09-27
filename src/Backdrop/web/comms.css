@@ -1,3 +1,11 @@
+/* comms.css — the whole look of the "Comms" uplink panel (comms.html). This page
+   runs in its OWN chromeless WebView2 inside CommsWindow, not the wallpaper. The
+   layout is one vertical flex column: drag bar / status line / scrolling log /
+   attachment chips / compose row. Cache-bust with ?v=N in comms.html on any edit. */
+
+/* Space-terminal palette. Same void/frost/verdant hexes the scene shaders use
+   (config.js), kept as CSS vars so the panel matches the wallpaper it floats over.
+   --dim is a pre-faded frost for secondary text so we don't repeat the rgba(). */
 :root {
   --void: #04060c;
   --frost: #cfe9ff;
@@ -5,22 +13,39 @@
   --dim: rgb(207 233 255 / 45%);
 }
 
+/* Hard reset. border-box so the padding we put on .bar / .compose doesn't blow
+   out the fixed window width, and zero margin/padding so the flex column starts
+   flush against the window edge. */
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
+/* Page shell. height:100% so the flex column can fill the window (WebView2 gives
+   the document the full client area). Solid --void: since the CommsWindow input
+   fix (AllowsTransparency removed) the WebView2 surface is opaque and paints this
+   colour wherever the page doesn't, so the shell owns the whole look — no wash
+   alpha needed, and text contrast no longer depends on what's behind the panel. */
 html, body {
   height: 100%;
-  background: rgb(4 6 12 / 55%);
+  background: var(--void);
   color: var(--frost);
   font: 12px/1.45 "Cascadia Mono", "Consolas", "Segoe UI Variable Text", monospace;
 }
 
+/* The flex column itself. user-select:none stops the chrome (drag bar, status
+   line, buttons) from turning into a text selection when the user click-drags
+   on it; .log re-enables select for the transcript further down. */
 body {
   display: flex;
   flex-direction: column;
   user-select: none;
-  background: transparent;
 }
 
+/* The drag bar (#drag / .bar) — header strip that stands in for the missing title
+   bar (CommsWindow is WindowStyle=None). Flex row: dot, "COMMS" label, model
+   picker, NEW, close. cursor:grab is the visual hint that the strip is draggable;
+   the actual move is comms.js posting {type:"drag"} to the host on pointerdown,
+   which lands in CommsWindow.BeginDrag (ReleaseCapture + WM_NCLBUTTONDOWN caption
+   trick). background rgb(4 6 12 / 62%) is a touch deeper than the page shell so
+   the header stays readable over a busy log. */
 .bar {
   display: flex;
   align-items: center;
@@ -34,9 +59,19 @@ body {
   cursor: grab;
 }
 
+/* The little status dot before "COMMS" — verdant = the theme's "signal good"
+   colour. Second child is the "COMMS" text: flex:1 makes it eat the leftover
+   width so the buttons sit hard right; min-width:0 lets it shrink and ellipsis
+   instead of forcing the flex row wider than the window. */
 .mark { color: var(--verdant); font-size: 9px; }
 .bar span:nth-child(2) { flex: 1; opacity: 0.8; min-width: 0; }
 
+/* Model <select> in the header. all:unset wipes the OS dropdown chrome so we can
+   redraw it in the terminal style, then we add back just the box we want.
+   text-transform:none overrides the .bar uppercase so model ids stay literal
+   (they're case-sensitive on the API). comms.js skips the drag when pointerdown
+   lands on a select, so this control still opens normally — but see the C#-side
+   focus bug: the dropdown may need the window clicked first to take the click. */
 #model {
   all: unset;
   max-width: 132px;
@@ -50,6 +85,10 @@ body {
   cursor: pointer;
 }
 
+/* NEW and close (✕) buttons. all:unset strips the native <button> look; they're
+   just dim glyphs that brighten on hover. Low opacity keeps them quiet until you
+   go looking for them. comms.js's drag handler ignores pointerdown on <button>,
+   so pressing these never starts a window move. */
 #newchat, #close {
   all: unset;
   cursor: pointer;
@@ -57,8 +96,13 @@ body {
   padding: 2px 6px;
 }
 #newchat:hover, #close:hover { opacity: 1; }
+/* Extra letter-spacing on "NEW" so the 3-letter word reads as a label, not a typo. */
 #newchat { letter-spacing: 0.2em; }
 
+/* Status line (#meta) — the "NO CARRIER" / "CARRIER <model>" readout comms.js
+   rewrites as connection state changes. Just a dim uppercase caption under the
+   header; slightly translucent background so it separates from the log without a
+   hard rule. */
 .meta {
   padding: 8px 12px 0;
   font-size: 10px;
@@ -68,6 +112,12 @@ body {
   background: rgb(4 6 12 / 35%);
 }
 
+/* The transcript (#log). flex:1 = it takes ALL the leftover column height between
+   the fixed header/status above and the compose row below; overflow:auto makes
+   just this region scroll (comms.js pins scrollTop to the bottom on each new
+   line). It's a nested flex column so each <li> bubble can align left/right on
+   its own. user-select:text deliberately re-enables selection here — the body set
+   it to none, but you DO want to copy message text out of the log. */
 .log {
   flex: 1;
   overflow: auto;
@@ -79,6 +129,9 @@ body {
   user-select: text;
 }
 
+/* One message bubble. max-width:92% keeps a long line from spanning edge to edge
+   so the left/right alignment still reads as "who said it". Faint border + dark
+   translucent fill = the chat-bubble card. */
 .log li {
   max-width: 92%;
   padding: 8px 10px;
@@ -86,10 +139,17 @@ body {
   background: rgb(11 18 32 / 58%);
 }
 
+/* Per-speaker bubble styling. .you (your messages) hug the right with a verdant-
+   tinted border; .ship (the UPLINK/assistant) hugs the left; .sys (local UI
+   notices like "history cleared") stretches full width and fades back — it's not
+   part of the conversation. align-self on a flex child is what does the L/R pin. */
 .log li.you { align-self: flex-end; border-color: rgb(53 227 160 / 28%); }
 .log li.ship { align-self: flex-start; }
 .log li.sys { align-self: stretch; opacity: 0.55; font-size: 11px; }
 
+/* The "YOU" / "UPLINK" / "COMMS" call-sign label at the top of each bubble.
+   display:block so it sits on its own line above the message text; wide tracking
+   + tiny size + low opacity make it a quiet tag, not a shout. */
 .who {
   display: block;
   font-size: 9px;
@@ -99,6 +159,10 @@ body {
   margin-bottom: 4px;
 }
 
+/* The compose row (#form) — bottom-pinned input area: 📎, IMG, the text field,
+   SEND. It's a flex child of the body column with no flex-grow, so it keeps its
+   natural height while .log above absorbs the rest. Extra bottom padding leaves
+   room above the CanResizeWithGrip resize grip in the window's corner. */
 .compose {
   display: flex;
   gap: 8px;
@@ -107,6 +171,16 @@ body {
   background: rgb(4 6 12 / 62%);
 }
 
+/* The message text field (#input). flex:1 so it eats all the width the buttons
+   don't. outline:none drops the browser's focus ring in favour of the static
+   border — purely cosmetic, it does NOT affect whether the field can be focused.
+   INPUT-BUG WATCH: nothing here (no pointer-events, no position/z-index, no
+   disabled state) stops this input taking focus or a click. When typing does
+   nothing after the 1397b90 transparency edit, it's because OS keyboard focus
+   never crosses into the WebView2 child HWND of the now software-composited
+   layered window — comms.js's input.focus() call can't pull it across that
+   boundary. That's a C#/WPF airspace issue (see CommsWindow.xaml.cs); this rule
+   is not involved and editing it won't help. */
 .compose input {
   flex: 1;
   background: rgb(11 18 32 / 72%);
@@ -117,6 +191,9 @@ body {
   font: inherit;
 }
 
+/* SEND / IMG / 📎 buttons. Outline-only verdant style so they read as "actions"
+   without a heavy fill. .compose button also matches the type="submit" SEND
+   button, hence one rule for all three. */
 .compose button {
   background: transparent;
   border: 1px solid var(--verdant);
@@ -127,8 +204,16 @@ body {
   cursor: pointer;
 }
 
+/* comms.js's busy() toggles the disabled attribute on every send-path control
+   while a turn is in flight; this just greys them and drops the pointer cursor so
+   it's obvious you can't stack a second prompt. */
 .compose button:disabled { opacity: 0.35; cursor: default; }
 
+/* Attachment chips (#chips) — the row of "file staged for the next message"
+   pills, sitting between the log and the compose row. comms.js toggles the
+   hidden attribute on this <ul> so when nothing is staged it collapses to zero
+   height. flex-wrap so several attachments wrap to a second line instead of
+   overflowing the window width. */
 .chips {
   list-style: none;
   display: flex;
@@ -137,6 +222,8 @@ body {
   padding: 0 12px 8px;
 }
 
+/* One attachment pill: just the filename in a verdant-outlined tag, matching the
+   button styling so it reads as "part of the compose area". */
 .chips li {
   font-size: 10px;
   letter-spacing: 0.08em;
@@ -145,6 +232,10 @@ body {
   color: var(--verdant);
 }
 
+/* Images inside a log bubble (from /imagine or an image model). display:block +
+   max-width:100% so a large result scales down to the bubble width instead of
+   forcing the log to scroll sideways; margin-top separates it from any text in
+   the same bubble. */
 .log img {
   display: block;
   max-width: 100%;

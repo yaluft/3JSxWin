@@ -1,20 +1,51 @@
-// Optional themes live under ./themes. Boot reads index.json only;
-// theme.js is imported the first time an installed id is shown.
+// theme-catalog.js — the lazy loader for OPTIONAL scenes (the ones that aren't
+// baked into scenes.js). Optional themes live under ./themes/<id>/theme.js.
+// The rule that shapes this whole file: boot must stay cheap, so at startup we
+// fetch ONLY themes/index.json (a tiny manifest of id + label + blurb). The
+// actual theme.js module — three.js code, shaders, textures — is import()ed the
+// first time an installed theme is asked to render, and never before.
+//
+// Three sets of state, and it matters which is which:
+//   catalog   — everything index.json advertises (may or may not be installed)
+//   installed — the subset the user has actually turned on (from config.installed)
+//   cache     — theme id -> the already-import()ed module, so we import once
 
 import { CORE_IDS, setActiveSceneIds, mergeSceneMeta, SCENE_META } from './scenes-meta.js';
 
+// id -> loaded ES module. loadTheme() fills this on first successful import and
+// reads it on every call after, so a theme's theme.js is fetched and evaluated
+// exactly once per session. dropTheme() evicts an entry if a theme is uninstalled.
 const cache = new Map();
+// What index.json advertised this boot. An array of { id, label, blurb, ... }.
+// Empty until loadCatalog() runs; empty forever if there's no themes/ folder.
 let catalog = [];
+// The ids the user has enabled. Always a subset of catalog ids (setInstalled
+// filters against the catalog), so we can never "install" a theme we have no
+// manifest entry for.
 let installed = new Set();
 
+// Called once at boot (from main.js, before the scene list is built). Fetches the
+// manifest and nothing else — no theme.js is touched here. This is the ONLY
+// network request the catalog makes at startup.
 export async function loadCatalog() {
   try {
+    // cache: 'no-cache' forces a revalidation every boot, same reasoning as
+    // config.json: the settings panel / an install step can rewrite index.json
+    // in place and we must see that on the next launch, not a stale disk copy.
     const response = await fetch('./themes/index.json', { cache: 'no-cache' });
+    // No themes/ folder, or a 404 on a stripped deploy: not an error. The app
+    // just runs core-only. catalog stays [] and every guard below short-circuits.
     if (!response.ok) return catalog;
     const data = await response.json();
+    // Defensive: only accept a real array under `themes`. A malformed manifest
+    // leaves us core-only rather than crashing the boot path.
     catalog = Array.isArray(data.themes) ? data.themes : [];
+    // Seed the dropdown label/blurb for each advertised theme NOW, from the
+    // manifest, so the scene menu can name a theme before its theme.js is ever
+    // imported. The module's own `meta` overrides this later (see loadTheme).
     for (const entry of catalog) mergeSceneMeta(entry.id, entry);
   } catch (error) {
+    // Malformed JSON or a fetch failure — log and carry on core-only.
     console.warn('themes/index.json unreadable', error);
   }
   return catalog;

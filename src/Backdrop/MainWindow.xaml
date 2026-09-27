@@ -1,3 +1,55 @@
+<!--
+  MainWindow.xaml — the wallpaper window itself. One of these per monitor (Duplicate mode)
+  or one covering the whole span (Single/Span). Code-behind (MainWindow.xaml.cs) is what
+  reparents this HWND under Explorer's WorkerW so it sits *behind* the desktop icons.
+  This markup only sets the "invisible, chrome-less, full-bleed" starting shape; every
+  runtime tweak (windowed mode, screensaver mode, the actual bounds) happens in code.
+
+  XAML note: comments can only sit between elements, not between a tag's attributes, so the
+  per-property reasoning is collected here instead of inline on each line below.
+
+    x:Class                 binds this markup to the MainWindow partial class in MainWindow.xaml.cs.
+    wv2                      the WebView2 WPF wrapper namespace — the control the whole scene renders in.
+
+    Width / Height           placeholder size only. The real physical rectangle is pushed in from
+                             code (ApplyBounds) once the monitor layout is known, and overridden
+                             again in windowed / screensaver mode. A concrete value here just
+                             avoids a zero-size window during the first layout pass.
+
+    WindowStyle=None         no title bar, no border, no min/max/close buttons. A wallpaper must
+                             be pure pixels — any chrome would flash as a floating box before we
+                             manage to slip the window behind the icons.
+
+    ResizeMode=NoResize      the user can't resize it. Size is entirely our decision, driven by
+                             monitor geometry, so the resize grips and maximize behavior are off.
+
+    ShowInTaskbar=False      keep it out of the taskbar and Alt+Tab — it's furniture, not an app
+                             window, and the user should never be able to "switch to" it.
+                             Code-behind also sets WS_EX_TOOLWINDOW / WS_EX_NOACTIVATE on the HWND
+                             to enforce the same thing at the Win32 level during the attach.
+
+    AllowsTransparency=False no per-pixel alpha. Setting it True forces WPF onto a slow
+                             layered-window path and is incompatible with hosting an HWND child
+                             like WebView2 (the browser surface renders black or not at all). We
+                             don't need transparency — the scene fills every pixel — so we stay
+                             on the fast composited path.
+
+    Background=#FF04060C     near-black fill shown for the split second before WebView2 paints its
+                             first frame. Matches WEBVIEW2_DEFAULT_BACKGROUND_COLOR in App.xaml.cs
+                             and DefaultBackgroundColor in code-behind, so there's no white flash.
+
+    Topmost=False            explicitly NOT topmost. The whole point is to live at the very bottom
+                             of the z-order; code-behind re-asserts HWND_BOTTOM after every
+                             desktop refresh.
+
+    UseLayoutRounding /       snap layout to whole device pixels. The scene is full-screen WebGL,
+    SnapsToDevicePixels       so any sub-pixel offset on the WebView2 surface reads as a blurry
+                             edge or seam, especially across a multi-monitor span.
+
+    WindowStartupLocation=    we position the window ourselves (off-screen first, then the exact
+    Manual                   physical rectangle via SetWindowPos). Auto-placement would briefly
+                             show it centered on the primary monitor.
+-->
 <Window x:Class="Backdrop.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
@@ -13,6 +65,12 @@
         UseLayoutRounding="True"
         SnapsToDevicePixels="True"
         WindowStartupLocation="Manual">
+    <!--
+      Single full-bleed WebView2 filling the Grid. x:Name="Web" is how code-behind reaches
+      it: EnsureCoreWebView2Async (against the one shared CoreWebView2Environment), the
+      virtual-host mapping (https://backdrop.invalid/ -> the web/ folder), then Navigate to
+      index.html. The entire three.js scene lives inside this one control.
+    -->
     <Grid>
         <wv2:WebView2 x:Name="Web" />
     </Grid>

@@ -13,6 +13,7 @@ foreach ($name in @("config.js", "host.js", "hud.js", "main.js", "motes.js", "sk
 Copy-Item (Join-Path $src "vendor\three.module.js") (Join-Path $dst "vendor\three.module.js") -Force
 Copy-Item (Join-Path $src "vendor\three.core.min.js") (Join-Path $dst "vendor\three.core.min.js") -Force
 Copy-Item (Join-Path $src "vendor\anime.es.js") (Join-Path $dst "vendor\anime.es.js") -Force
+Copy-Item (Join-Path $src "vendor\Tone.js") (Join-Path $dst "vendor\Tone.js") -Force
 Copy-Item (Join-Path $src "console.html") (Join-Path $dst "console.html") -Force
 $themesDst = Join-Path $dst "themes"
 if (Test-Path $themesDst) {

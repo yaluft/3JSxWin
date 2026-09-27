@@ -25,6 +25,7 @@ Commits made in collaboration carry a `Co-Authored-By: Claude <noreply@anthropic
 
 ## Third party
 
+- **[Tone.js](https://tonejs.github.io)** — 15.1.22, MIT. Vendored tree-shaken ESM in `src/Backdrop/web/vendor/Tone.js`. Offline interstellar bed.
 - **[three.js](https://threejs.org)** — r185, MIT. Vendored in `src/Backdrop/web/vendor/`. Scene patterns from:
   - [`webgl_shaders_ocean`](https://threejs.org/examples/#webgl_shaders_ocean) — full-screen shader surface
   - [`webgl_points_sprites`](https://threejs.org/examples/#webgl_points_sprites) — GPU-animated point field

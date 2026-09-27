@@ -1,45 +1,65 @@
-// Soft wallpaper soundscapes. No files — oscillators and filtered noise.
-// Default gain is 20% so it sits under the wallpaper instead of filling the room.
+// audio.js — the wallpaper's ambient sound engine, built on Tone.js.
+// One export, createLowVibe(), starts a calm interstellar bed per scene: a
+// breathing drone, cosmic wind, a slow pad, and sparse phrases, all through a
+// long reverb. main.js owns the instance; the panel's volume slider and the
+// scene switcher call into it. There is no audio file anywhere and no network:
+// Tone.js is vendored next to three.js, and every sound is synthesised live.
 //
-// Chromium refuses to start an AudioContext before a user gesture (and logs five
-// identical warnings if we call oscillator.start() while the context is suspended).
-// The graph is built only after resume() actually leaves the context running.
-// Nature scenes swap the graph; everything else keeps the original low-vibe drone.
+// The sound brief: "space noises with calm interstellar music". That means
+//   DRONE  — a near-subliminal root + fifth that breathes on a slow LFO.
+//   WIND   — filtered brown/pink noise, cutoff wandering like solar wind.
+//   PAD    — stacked sine AM voices holding two-note intervals for many seconds.
+//   PHRASE — three-note motifs on the scene's scale, minutes of rest between.
+//   SPACE  — rare whooshes, telemetry chirps, and high pings, never a beat.
+//
+// Chromium refuses to start an AudioContext before a user gesture. Tone.start()
+// is called from start(), which main.js only invokes from a key/pointer handler.
+// The Tone.js module itself is dynamically imported on first start so preview
+// iframes never pay for it.
 
 const LEVEL = 0.2;
 
-function fillNoise(data, kind) {
-  if (kind === 'brown') {
-    let brown = 0;
-    for (let i = 0; i < data.length; i++) {
-      brown = (brown + (Math.random() * 2 - 1) * 0.02) * 0.98;
-      data[i] = brown;
-    }
-    return;
-  }
-  if (kind === 'pink') {
-    let b0 = 0; let b1 = 0; let b2 = 0; let b3 = 0; let b4 = 0; let b5 = 0; let b6 = 0;
-    for (let i = 0; i < data.length; i++) {
-      const w = Math.random() * 2 - 1;
-      b0 = 0.99886 * b0 + w * 0.0555179;
-      b1 = 0.99332 * b1 + w * 0.0750759;
-      b2 = 0.96900 * b2 + w * 0.1538520;
-      b3 = 0.86650 * b3 + w * 0.3104856;
-      b4 = 0.55000 * b4 + w * 0.5329522;
-      b5 = -0.7616 * b5 - w * 0.0168980;
-      data[i] = (b0 + b1 + b2 + b3 + b4 + b5 + b6 + w * 0.5362) * 0.11;
-      b6 = w * 0.115926;
-    }
-    return;
-  }
-  for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
-}
+const COLORS = {
+  cold:    { cutoff: 1600, detune: 6,  harmonicity: 1.5, noise: 'brown' },
+  warm:    { cutoff: 900,  detune: 12, harmonicity: 1.2, noise: 'brown' },
+  gold:    { cutoff: 2000, detune: 4,  harmonicity: 2.0, noise: 'pink'  },
+  violet:  { cutoff: 1200, detune: 9,  harmonicity: 1.8, noise: 'brown' },
+  deep:    { cutoff: 620,  detune: 14, harmonicity: 1.1, noise: 'brown' },
+  bright:  { cutoff: 2400, detune: 5,  harmonicity: 2.2, noise: 'pink'  },
+  verdant: { cutoff: 1100, detune: 8,  harmonicity: 1.4, noise: 'brown' },
+};
+
+// Fallback beds for core scenes (no theme module) and for a theme whose
+// buildAudio() throws. Optional themes usually pass their own options into
+// api.interstellar() instead of relying on this table.
+const PRESETS = {
+  aurora:      { root: 73.42, scale: [146.83, 174.61, 196.00, 220.00, 261.63, 293.66, 349.23], color: 'verdant', density: 0.38, sparkle: 0.30, wind: 0.32 },
+  terrascii:   { root: 49.00, scale: [ 98.00, 116.54, 130.81, 146.83, 174.61, 196.00, 233.08], color: 'warm',    density: 0.30, sparkle: 0.15, wind: 0.40 },
+  warpscii:    { root: 55.00, scale: [110.00, 130.81, 146.83, 164.81, 196.00, 220.00, 261.63], color: 'violet',  density: 0.45, sparkle: 0.25, wind: 0.35 },
+  ion:         { root: 43.65, scale: [ 87.31, 103.83, 116.54, 130.81, 155.56, 174.61, 207.65], color: 'cold',    density: 0.28, sparkle: 0.40, wind: 0.30 },
+  blobscii:    { root: 65.41, scale: [130.81, 155.56, 174.61, 196.00, 233.08, 261.63, 311.13], color: 'warm',    density: 0.36, sparkle: 0.20, wind: 0.28 },
+  glyphfall:   { root: 82.41, scale: [164.81, 196.00, 220.00, 246.94, 293.66, 329.63, 392.00], color: 'gold',    density: 0.34, sparkle: 0.50, wind: 0.22 },
+  'night-field': { root: 55.00, scale: [110.00, 130.81, 146.83, 196.00, 220.00, 261.63], color: 'deep', density: 0.28, sparkle: 0.22, wind: 0.35 },
+  farfield:    { root: 61.74, scale: [123.47, 146.83, 164.81, 185.00, 220.00, 246.94], color: 'cold', density: 0.18, sparkle: 0.15, wind: 0.25 },
+  solarsystem: { root: 49.00, scale: [ 98.00, 123.47, 146.83, 164.81, 196.00, 246.94, 293.66], color: 'warm', density: 0.42, sparkle: 0.20, wind: 0.30 },
+  starnode:    { root: 65.41, scale: [130.81, 146.83, 174.61, 196.00, 220.00, 261.63, 293.66], color: 'violet', density: 0.38, sparkle: 0.28, wind: 0.30, echo: true },
+  globule:     { root: 43.65, scale: [ 87.31,  98.00, 116.54, 130.81, 174.61, 196.00, 233.08], color: 'deep', density: 0.32, sparkle: 0.40, wind: 0.45, echo: true },
+  webbmirror:  { root: 82.41, scale: [164.81, 207.65, 246.94, 329.63, 369.99, 415.30], color: 'gold', density: 0.40, sparkle: 0.70, wind: 0.22 },
+  lensfield:   { root: 73.42, scale: [146.83, 174.61, 220.00, 293.66, 349.23], color: 'violet', density: 0.33, sparkle: 0.35, wind: 0.28, echo: true },
+  nircam:      { root: 73.42, scale: [146.83, 174.61, 220.00, 293.66, 329.63, 440.00], color: 'gold', density: 0.40, sparkle: 0.55, wind: 0.25 },
+  starburst:   { root: 110.00, scale: [220.00, 261.63, 329.63, 392.00, 440.00], color: 'violet', density: 0.50, sparkle: 0.35, wind: 0.55 },
+  saucer:      { root: 98.00, scale: [196.00, 220.00, 246.94, 293.66, 329.63, 392.00], color: 'warm', density: 0.28, sparkle: 0.20, wind: 0.22, echo: true },
+  lionshead:   { root: 73.42, scale: [146.83, 174.61, 220.00, 261.63, 293.66, 349.23], color: 'warm', density: 0.30, sparkle: 0.40, wind: 0.40 },
+  eclipsepair: { root: 55.00, scale: [110.00, 130.81, 146.83, 164.81, 196.00, 220.00], color: 'gold', density: 0.22, sparkle: 0.25, wind: 0.20, echo: true },
+  spikehero:   { root: 130.81, scale: [261.63, 293.66, 329.63, 392.00, 440.00, 523.25], color: 'bright', density: 0.40, sparkle: 0.80, wind: 0.25 },
+  coldlens:    { root: 87.31, scale: [174.61, 196.00, 233.08, 261.63, 293.66, 349.23], color: 'cold', density: 0.30, sparkle: 0.45, wind: 0.35, echo: true },
+  orionhall:   { root: 73.42, scale: [146.83, 164.81, 196.00, 220.00, 246.94, 293.66], color: 'deep', density: 0.20, sparkle: 0.30, wind: 0.50 },
+};
+
+const DEFAULT_PRESET = PRESETS.aurora;
 
 export function createLowVibe(volume = LEVEL, sceneId = 'aurora') {
-  const AudioCtx = globalThis.AudioContext || globalThis.webkitAudioContext;
-  if (!AudioCtx) return { start() {}, stop() {}, dispose() {}, setScene() {}, setVolume() {}, setEnabled() {}, setThemeModule() {} };
-
-  let ctx = null;
+  let Tone = null;
   let master = null;
   let current = sceneId;
   let nodes = [];
@@ -47,127 +67,32 @@ export function createLowVibe(volume = LEVEL, sceneId = 'aurora') {
   let playing = false;
   let target = Math.min(Math.max(volume, 0), 1);
   let themeMod = null;
+  let buildToken = 0;
+  let toneReady = null;
+
+  function loadTone() {
+    toneReady ??= import('tone').catch((error) => {
+      console.warn('Tone.js failed to load', error);
+      return null;
+    });
+    return toneReady;
+  }
 
   function track(node) {
-    nodes.push(node);
+    if (node) nodes.push(node);
     return node;
   }
 
-  function noise(kind = 'white') {
-    const buf = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate);
-    fillNoise(buf.getChannelData(0), kind);
-    const src = track(ctx.createBufferSource());
-    src.buffer = buf;
-    src.loop = true;
-    return src;
-  }
-
-  function osc(type, freq) {
-    const o = track(ctx.createOscillator());
-    o.type = type;
-    o.frequency.value = freq;
-    return o;
-  }
-
-  function gain(value) {
-    const g = track(ctx.createGain());
-    g.gain.value = value;
-    return g;
-  }
-
-  function filter(type, freq, q = 0.7) {
-    const f = track(ctx.createBiquadFilter());
-    f.type = type;
-    f.frequency.value = freq;
-    f.Q.value = q;
-    return f;
-  }
-
-  function lfo(freq, depth, dest) {
-    const o = osc('sine', freq);
-    const g = gain(depth);
-    o.connect(g);
-    g.connect(dest);
-    return o;
-  }
-
-  // Two-oscillator low pad — world themes call api.bed(freqA, freqB, level).
-  function bed(freqA, freqB, level) {
-    const a = osc('sine', freqA);
-    const b = osc('sine', freqB);
-    const g = gain(level);
-    a.connect(g);
-    b.connect(g);
-    g.connect(master);
-    return g;
-  }
-
-  // Filtered brown-noise wash — api.tide(level).
-  function tide(level) {
-    const src = noise('brown');
-    const lp = filter('lowpass', 220, 0.7);
-    const g = gain(level);
-    src.connect(lp);
-    lp.connect(g);
-    g.connect(master);
-    lfo(0.045, 60, lp.frequency);
-    return g;
-  }
-
-  const GALAXY_IDS = new Set([
-    'night-field', 'farfield', 'solarsystem', 'starnode', 'globule',
-  ]);
-  const GALAXY_STREAMS = [
-    'https://ice4.somafm.com/deepspaceone-128-mp3',
-    'https://ice2.somafm.com/deepspaceone-128-mp3',
-    'https://ice1.somafm.com/deepspaceone-128-mp3',
-  ];
-  let streamEl = null;
-  let streamIdx = 0;
-  let streamWanted = false;
-
-  function stopStream() {
-    streamWanted = false;
-    if (!streamEl) return;
-    try { streamEl.pause(); } catch { /* */ }
-    try { streamEl.removeAttribute('src'); streamEl.load(); } catch { /* */ }
-    streamEl.remove();
-    streamEl = null;
-  }
-
-  function playStream(url) {
-    streamWanted = true;
-    const src = url || GALAXY_STREAMS[streamIdx % GALAXY_STREAMS.length];
-    if (streamEl && streamEl.dataset.src === src) {
-      streamEl.volume = target;
-      if (playing) streamEl.play()?.catch(() => {});
-      return;
-    }
-    stopStream();
-    streamWanted = true;
-    const el = document.createElement('audio');
-    el.id = 'backdrop-galaxy-stream';
-    el.dataset.src = src;
-    el.preload = 'auto';
-    el.crossOrigin = 'anonymous';
-    el.setAttribute('playsinline', '');
-    el.style.cssText = 'position:fixed;width:0;height:0;opacity:0;pointer-events:none;left:-9999px';
-    el.volume = target;
-    el.src = src;
-    el.addEventListener('error', () => {
-      if (!streamWanted) return;
-      streamIdx = (streamIdx + 1) % GALAXY_STREAMS.length;
-      if (GALAXY_STREAMS[streamIdx] !== src) playStream(GALAXY_STREAMS[streamIdx]);
-    });
-    document.body.appendChild(el);
-    streamEl = el;
-    if (playing) el.play()?.catch(() => {});
+  function later(ms, fn) {
+    const id = setTimeout(fn, ms);
+    cancels.push(() => clearTimeout(id));
+    return id;
   }
 
   function everyRandom(minMs, maxMs, fn) {
     let id = 0;
     const loop = () => {
-      if (!playing) return;
+      if (!playing) { id = setTimeout(loop, 500); return; }
       fn();
       id = setTimeout(loop, minMs + Math.random() * (maxMs - minMs));
     };
@@ -175,179 +100,344 @@ export function createLowVibe(volume = LEVEL, sceneId = 'aurora') {
     cancels.push(() => clearTimeout(id));
   }
 
+  function masterDb() {
+    if (!Tone || target <= 0) return -Infinity;
+    return Tone.gainToDb(target);
+  }
+
+  // Tone.Param.cancelScheduledValues(time) asserts a finite time — calling it
+  // with no argument throws and used to abort the fade, leaving the master at
+  // -Infinity (silent graph, running context).
+  function fadeMaster(db, seconds) {
+    if (!master || !Tone) return;
+    const now = Tone.getContext().currentTime;
+    master.volume.cancelScheduledValues(now);
+    let from = master.volume.value;
+    if (!Number.isFinite(from)) from = -80;
+    master.volume.setValueAtTime(from, now);
+    master.volume.rampTo(Number.isFinite(db) ? db : -Infinity, seconds);
+  }
+
+  function pick(list) {
+    return list[Math.floor(Math.random() * list.length)];
+  }
+
   function clearGraph() {
     for (const cancel of cancels) cancel();
     cancels = [];
     for (const node of nodes) {
       try { node.stop?.(); } catch { /* already stopped */ }
-      try { node.disconnect(); } catch { /* already gone */ }
+      try { node.dispose?.(); } catch { /* already gone */ }
+      try { node.disconnect?.(); } catch { /* already gone */ }
     }
     nodes = [];
   }
 
-  function startTracked() {
-    for (const node of nodes) {
-      try { node.start?.(); } catch { /* not a source, or already started */ }
-    }
+  // Shared FX bus: chorus + delay into a long hall, then the master fader.
+  // Everything a theme builds should land on `verb` (or chorus/delay) so the
+  // wallpaper always has that distant-space tail, even if a theme only hums.
+  async function makeBus() {
+    const { Volume, Chorus, FeedbackDelay, Reverb } = Tone;
+    const verb = track(new Reverb({ decay: 7, preDelay: 0.07, wet: 0.62 }));
+    verb.connect(master);
+    await verb.ready.catch(() => verb.generate?.());
+
+    const chorus = track(new Chorus({ frequency: 0.07, delayTime: 6, depth: 0.4, wet: 0.32, spread: 180 }));
+    chorus.connect(verb);
+    chorus.start();
+
+    const delay = track(new FeedbackDelay({ delayTime: 0.68, feedback: 0.28, wet: 0.2 }));
+    delay.connect(verb);
+
+    return { verb, chorus, delay };
   }
 
-  function buildDrone() {
-    const oscA = osc('sine', 55);
-    const oscB = osc('sine', 82.4);
-    const oscC = osc('triangle', 110);
-    const oscGain = gain(0.55);
-    oscA.connect(oscGain);
-    oscB.connect(oscGain);
-    const pad = gain(0.08);
-    oscC.connect(pad);
-
-    const src = noise('brown');
-    const lp = filter('lowpass', 180, 0.7);
-    const noiseGain = gain(0.35);
-    src.connect(lp);
-    lp.connect(noiseGain);
-    lfo(0.07, 40, lp.frequency);
-
-    oscGain.connect(master);
-    pad.connect(master);
-    noiseGain.connect(master);
-    startTracked();
-  }
-
-  function buildIon() {
-    const a = osc('sine', 73.4);
-    const b = osc('sine', 110.1);
-    const g = gain(0.09);
-    a.connect(g);
-    b.connect(g);
-    g.connect(master);
-    lfo(0.11, 8, a.frequency);
-
-    const hiss = noise('white');
-    const bp = filter('bandpass', 2400, 4);
-    const hg = gain(0.04);
-    hiss.connect(bp);
-    bp.connect(hg);
-    hg.connect(master);
-    startTracked();
-  }
-
-  function buildStarwell() {
-    const a = osc('sawtooth', 55);
-    const lp = filter('lowpass', 240, 0.8);
-    const g = gain(0.06);
+  function makeDrone(root, color, chorus) {
+    const { Oscillator, Gain, Filter, LFO } = Tone;
+    const a = track(new Oscillator(root, 'sine'));
+    const b = track(new Oscillator(root * 1.498, 'sine'));
+    const lp = track(new Filter(color.cutoff * 0.35, 'lowpass'));
+    const g = track(new Gain(0.07));
+    const breath = track(new LFO({ frequency: 0.045, min: 0.04, max: 0.1 }));
+    const drift = track(new LFO({ frequency: 0.03, min: root * 0.994, max: root * 1.006 }));
     a.connect(lp);
+    b.connect(lp);
     lp.connect(g);
-    g.connect(master);
-    lfo(0.04, 18, a.frequency);
-
-    const wash = noise('brown');
-    const wlp = filter('lowpass', 160, 0.6);
-    const wg = gain(0.18);
-    wash.connect(wlp);
-    wlp.connect(wg);
-    wg.connect(master);
-    startTracked();
+    g.connect(chorus);
+    breath.connect(g.gain);
+    drift.connect(a.frequency);
+    breath.start();
+    drift.start();
+    a.start();
+    b.start();
+    return g;
   }
 
+  function makeWind(amount, color, verb) {
+    if (amount <= 0) return null;
+    const { Noise, AutoFilter, Gain, Filter } = Tone;
+    const src = track(new Noise(color.noise));
+    const sweep = track(new AutoFilter({
+      frequency: 0.028,
+      baseFrequency: 160,
+      octaves: 2.6,
+      type: 'sine',
+      wet: 1,
+    }));
+    const air = track(new Filter(4200, 'highpass'));
+    const g = track(new Gain(0.045 * amount));
+    const shimmer = track(new Gain(0.012 * amount));
+    src.connect(sweep);
+    sweep.connect(g);
+    g.connect(verb);
+    src.connect(air);
+    air.connect(shimmer);
+    shimmer.connect(verb);
+    sweep.start();
+    src.start();
+    return src;
+  }
 
-  function buildGlyphfall() {
-    const bed = osc('sine', 49);
-    const bedG = gain(0.04);
-    bed.connect(bedG);
-    bedG.connect(master);
+  function makePad(scale, color, chorus) {
+    const { PolySynth, AMSynth, Filter } = Tone;
+    const pad = track(new PolySynth(AMSynth, {
+      harmonicity: color.harmonicity,
+      detune: color.detune,
+      oscillator: { type: 'sine' },
+      envelope: { attack: 4.2, decay: 1.8, sustain: 0.55, release: 8 },
+      modulation: { type: 'sine' },
+      modulationEnvelope: { attack: 2.5, decay: 0.4, sustain: 0.25, release: 5 },
+    }));
+    pad.maxPolyphony = 4;
+    pad.volume.value = -22;
+    const lp = track(new Filter(color.cutoff, 'lowpass'));
+    pad.connect(lp);
+    lp.connect(chorus);
+    return pad;
+  }
 
-    const rain = noise('brown');
-    const hp = filter('highpass', 420, 0.6);
-    const lp = filter('lowpass', 1400, 0.8);
-    const rg = gain(0.09);
-    rain.connect(hp);
-    hp.connect(lp);
-    lp.connect(rg);
-    rg.connect(master);
-    lfo(0.09, 0.025, rg.gain);
+  function makeVoice(volumeDb, delay) {
+    const { Synth, Panner } = Tone;
+    const voice = track(new Synth({
+      oscillator: { type: 'sine' },
+      envelope: { attack: 0.03, decay: 3.4, sustain: 0.08, release: 4.5 },
+    }));
+    voice.volume.value = volumeDb;
+    const pan = track(new Panner(0));
+    voice.connect(pan);
+    pan.connect(delay);
+    return { voice, pan };
+  }
 
-    const ticks = noise('white');
-    const bp = filter('bandpass', 3200, 6);
-    const tg = gain(0.03);
-    ticks.connect(bp);
-    bp.connect(tg);
-    tg.connect(master);
+  async function interstellar(opts = {}) {
+    const preset = { ...DEFAULT_PRESET, ...opts };
+    const color = COLORS[preset.color] ?? COLORS.verdant;
+    const scale = preset.scale?.length ? preset.scale : DEFAULT_PRESET.scale;
+    const { verb, chorus, delay } = await makeBus();
 
-    startTracked();
+    makeDrone(preset.root ?? scale[0] / 2, color, chorus);
+    makeWind(preset.wind ?? 0.3, color, verb);
+    const pad = makePad(scale, color, chorus);
+    const lead = makeVoice(-18, delay);
+    const sparkle = makeVoice(-28, verb);
 
-    everyRandom(260, 1400, () => {
-      if (!ctx || !playing) return;
-      const now = ctx.currentTime;
-      const o = ctx.createOscillator();
-      const g = ctx.createGain();
-      o.type = 'square';
-      o.frequency.value = 880 + Math.random() * 1600;
-      g.gain.setValueAtTime(0.035, now);
-      g.gain.exponentialRampToValueAtTime(0.0001, now + 0.05);
-      o.connect(g);
-      g.connect(master);
-      o.start(now);
-      o.stop(now + 0.06);
-      o.onended = () => { try { o.disconnect(); g.disconnect(); } catch { /* */ } };
+    // Slow two-note holds — the "music" bed, not a performance.
+    const holdPad = () => {
+      const a = pick(scale);
+      let b = pick(scale);
+      if (b === a) b = scale[(scale.indexOf(a) + 2) % scale.length];
+      pad.triggerAttackRelease([a, b], 11);
+    };
+    holdPad();
+    everyRandom(14000, 24000, () => playing && holdPad());
+
+    // Sparse phrases: two or three notes walking the scale, then a long rest.
+    const density = Math.min(Math.max(preset.density ?? 0.35, 0), 1);
+    const minGap = 7000 + (1 - density) * 9000;
+    const maxGap = 12000 + (1 - density) * 14000;
+    let step = Math.floor(scale.length / 3);
+    everyRandom(minGap, maxGap, () => {
+      if (!playing) return;
+      const count = Math.random() < 0.4 ? 2 : 3;
+      let t = 0;
+      for (let i = 0; i < count; i++) {
+        const move = [-2, -1, 1, 1, 2][Math.floor(Math.random() * 5)];
+        step = (step + move + scale.length * 4) % scale.length;
+        const freq = scale[step];
+        const when = t;
+        later(when, () => {
+          if (!playing) return;
+          lead.pan.pan.rampTo(Math.random() * 1.0 - 0.5, 0.05);
+          lead.voice.triggerAttackRelease(freq, 2.6);
+          if (preset.echo) {
+            later(520, () => playing && lead.voice.triggerAttackRelease(freq * 0.5, 3.2));
+          }
+        });
+        t += 1600 + Math.random() * 1200;
+      }
+    });
+
+    // High dust — like distant stars catching the light.
+    const spark = Math.min(Math.max(preset.sparkle ?? 0.25, 0), 1);
+    if (spark > 0) {
+      everyRandom(5000 / Math.max(spark, 0.15), 14000 / Math.max(spark, 0.15), () => {
+        if (!playing) return;
+        const f = scale[scale.length - 1] * (1.5 + Math.random() * 1.8);
+        sparkle.pan.pan.rampTo(Math.random() * 1.6 - 0.8, 0.02);
+        sparkle.voice.triggerAttackRelease(f, 0.35);
+      });
+    }
+
+    // Space noises: solar-wind whoosh, satellite ping, faint telemetry.
+    everyRandom(18000, 38000, () => playing && whoosh(verb, color));
+    everyRandom(22000, 48000, () => playing && ping(delay));
+    everyRandom(30000, 70000, () => playing && chirp(delay));
+  }
+
+  function whoosh(verb, color) {
+    const { Noise, Filter, Gain, Panner } = Tone;
+    const src = new Noise(color.noise ?? 'brown');
+    const bp = new Filter({ type: 'bandpass', frequency: 200, Q: 1.1 });
+    const g = new Gain(0.0001);
+    const p = new Panner(Math.random() * 1.2 - 0.6);
+    src.connect(bp);
+    bp.connect(g);
+    g.connect(p);
+    p.connect(verb);
+    src.start();
+    const now = Tone.getContext().currentTime;
+    g.gain.setValueAtTime(0.0001, now);
+    g.gain.exponentialRampToValueAtTime(0.07, now + 0.9);
+    g.gain.exponentialRampToValueAtTime(0.0001, now + 4.8);
+    bp.frequency.setValueAtTime(160, now);
+    bp.frequency.exponentialRampToValueAtTime(780, now + 2.0);
+    bp.frequency.exponentialRampToValueAtTime(120, now + 4.8);
+    later(5200, () => {
+      try { src.stop(); } catch { /* already */ }
+      try { src.dispose(); bp.dispose(); g.dispose(); p.dispose(); } catch { /* already */ }
     });
   }
 
-  function themeApi() {
-    return { ctx, master, osc, noise, filter, gain, lfo, bed, tide, playStream, stopStream, startTracked, everyRandom };
+  function ping(delay) {
+    const { Synth } = Tone;
+    const s = new Synth({
+      oscillator: { type: 'sine' },
+      envelope: { attack: 0.002, decay: 1.6, sustain: 0, release: 1.1 },
+    });
+    s.volume.value = -27;
+    s.connect(delay);
+    s.triggerAttackRelease(1180 + Math.random() * 520, 0.28);
+    later(3500, () => { try { s.dispose(); } catch { /* already */ } });
   }
 
-  function buildFor(id) {
+  function chirp(delay) {
+    const { Synth, Panner } = Tone;
+    const s = new Synth({
+      oscillator: { type: 'sine' },
+      envelope: { attack: 0.004, decay: 0.07, sustain: 0, release: 0.04 },
+    });
+    s.volume.value = -34;
+    const p = new Panner(Math.random() * 1.6 - 0.8);
+    s.connect(p);
+    p.connect(delay);
+    const base = 740 + Math.random() * 680;
+    const n = 3 + Math.floor(Math.random() * 3);
+    for (let i = 0; i < n; i++) {
+      later(i * 95, () => playing && s.triggerAttackRelease(base * (i % 2 ? 1.14 : 1), 0.05));
+    }
+    later(n * 95 + 500, () => { try { s.dispose(); p.dispose(); } catch { /* already */ } });
+  }
+
+  // Compatibility wrappers so a theme that still talks in hum/strike doesn't
+  // go silent if we miss a rewrite. Both ride the same FX bus.
+  function hum(rootFreq) {
+    const color = COLORS.deep;
+    if (!nodes.some((n) => n.name === 'Chorus')) {
+      // Bus not built yet — themes should call interstellar(); this is a last resort.
+      makeDrone(rootFreq, color, master);
+      return;
+    }
+    makeDrone(rootFreq, color, nodes.find((n) => n.name === 'Chorus') ?? master);
+  }
+
+  function strike(freq, { level = 0.14, decay = 5 } = {}) {
+    if (!Tone || !playing) return;
+    const { Synth, Panner } = Tone;
+    const s = new Synth({
+      oscillator: { type: 'sine' },
+      envelope: { attack: 0.01, decay: decay * 0.55, sustain: 0.05, release: decay * 0.45 },
+    });
+    s.volume.value = Tone.gainToDb(Math.max(level, 0.0001)) - 6;
+    const p = new Panner(Math.random() * 0.9 - 0.45);
+    const sink = nodes.find((n) => n.name === 'FeedbackDelay') ?? master;
+    s.connect(p);
+    p.connect(sink);
+    s.triggerAttackRelease(freq, decay * 0.4);
+    later((decay + 0.4) * 1000, () => { try { s.dispose(); p.dispose(); } catch { /* already */ } });
+  }
+
+  function themeApi() {
+    return {
+      Tone,
+      ctx: Tone?.getContext?.()?.rawContext,
+      master,
+      interstellar,
+      hum,
+      strike,
+      everyRandom,
+      whoosh: () => {
+        const verb = nodes.find((n) => n.name === 'Reverb') ?? master;
+        whoosh(verb, COLORS.cold);
+      },
+      ping: () => ping(nodes.find((n) => n.name === 'FeedbackDelay') ?? master),
+      chirp: () => chirp(nodes.find((n) => n.name === 'FeedbackDelay') ?? master),
+    };
+  }
+
+  async function buildFor(id) {
+    const token = ++buildToken;
     clearGraph();
-    const galaxy = GALAXY_IDS.has(id) || Boolean(themeMod?.galaxyStream);
-    if (!galaxy) stopStream();
+    if (!Tone || !master) return;
+    const preset = PRESETS[id] ?? DEFAULT_PRESET;
     try {
-      if (themeMod?.buildAudio) themeMod.buildAudio(themeApi());
-      else if (id === 'ion') buildIon();
-      else if (id === 'warpscii') buildStarwell();
-      else if (id === 'glyphfall') buildGlyphfall();
-      else buildDrone();
+      if (themeMod?.buildAudio) {
+        const result = themeMod.buildAudio(themeApi());
+        if (result && typeof result.then === 'function') await result;
+      } else {
+        await interstellar(preset);
+      }
     } catch (error) {
       console.warn('theme audio failed', id, error);
-      try { buildDrone(); } catch { /* */ }
+      if (token !== buildToken) return;
+      try { clearGraph(); await interstellar(preset); } catch { /* stay silent */ }
     }
-    if (galaxy) playStream(themeMod?.galaxyStream || GALAXY_STREAMS[streamIdx % GALAXY_STREAMS.length]);
+    if (token !== buildToken) clearGraph();
   }
 
   return {
     async start() {
       if (playing) return;
       try {
-        ctx ??= new AudioCtx();
-        if (ctx.state === 'suspended') await ctx.resume();
-        if (ctx.state !== 'running') return;
+        Tone = await loadTone();
+        if (!Tone) return;
+        await Tone.start();
+        if (Tone.getContext().state !== 'running') return;
         if (!master) {
-          master = ctx.createGain();
-          master.gain.value = 0;
-          master.connect(ctx.destination);
+          master = new Tone.Volume(-80);
+          master.connect(Tone.getDestination());
         }
-        if (nodes.length === 0) buildFor(current);
-      } catch {
+        if (nodes.length === 0) await buildFor(current);
+      } catch (error) {
+        console.warn('audio start failed', error);
         return;
       }
-      const now = ctx.currentTime;
-      master.gain.cancelScheduledValues(now);
-      master.gain.setValueAtTime(master.gain.value, now);
-      master.gain.linearRampToValueAtTime(target, now + 1.8);
+      fadeMaster(masterDb(), 1.8);
       playing = true;
-      if (streamEl) {
-        streamEl.volume = target;
-        streamEl.play()?.catch(() => {});
-      }
     },
     stop() {
       if (!playing || !master) return;
-      const now = ctx.currentTime;
-      master.gain.cancelScheduledValues(now);
-      master.gain.setValueAtTime(master.gain.value, now);
-      master.gain.linearRampToValueAtTime(0, now + 0.5);
+      fadeMaster(-Infinity, 0.5);
       playing = false;
-      try { streamEl?.pause(); } catch { /* */ }
     },
     setThemeModule(mod) {
       themeMod = mod ?? null;
@@ -356,22 +446,16 @@ export function createLowVibe(volume = LEVEL, sceneId = 'aurora') {
       const next = id || 'aurora';
       if (next === current && !themeMod) return;
       current = next;
-      if (!ctx || !master) return;
-      const now = ctx.currentTime;
-      master.gain.cancelScheduledValues(now);
-      master.gain.setValueAtTime(0, now);
-      buildFor(current);
-      if (playing) master.gain.linearRampToValueAtTime(target, now + 0.7);
+      if (!Tone || !master) return;
+      master.volume.cancelScheduledValues(Tone.getContext().currentTime);
+      master.volume.value = -80;
+      void buildFor(current).then(() => {
+        if (playing && master) fadeMaster(masterDb(), 0.7);
+      });
     },
     setVolume(v) {
       target = Math.min(Math.max(v, 0), 1);
-      if (playing && master) {
-        const now = ctx.currentTime;
-        master.gain.cancelScheduledValues(now);
-        master.gain.setValueAtTime(master.gain.value, now);
-        master.gain.linearRampToValueAtTime(target, now + 0.2);
-      }
-      if (streamEl) streamEl.volume = target;
+      if (playing && master) fadeMaster(masterDb(), 0.2);
     },
     setEnabled(on) {
       if (!on) this.stop();
@@ -379,11 +463,11 @@ export function createLowVibe(volume = LEVEL, sceneId = 'aurora') {
     dispose() {
       for (const cancel of cancels) cancel();
       cancels = [];
-      stopStream();
-      try { ctx?.close(); } catch { /* already closed */ }
-      ctx = null;
+      clearGraph();
+      try { master?.dispose(); } catch { /* already */ }
+      try { Tone?.getContext?.()?.dispose(); } catch { /* already closed */ }
       master = null;
-      nodes = [];
+      Tone = null;
       playing = false;
     },
   };

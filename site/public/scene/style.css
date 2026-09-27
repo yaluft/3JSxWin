@@ -1,13 +1,27 @@
+/* style.css — the shared stylesheet for all three WebView2 pages: the wallpaper
+   (index.html), the settings window (console.html), and — via a couple of rules —
+   nothing else, since comms.html ships its own comms.css. The page is a frame for
+   a full-bleed <canvas> and a handful of HTML overlays that sit on top of it. */
+
 /* Boreal Drift — the page is a frame for the canvas and nothing else. */
 
+/* :root custom properties — only the three colours that HTML chrome (clock,
+   fallback text, dock) needs to echo from the scene palette. The five real
+   shader palette slots live in config.js / palettes.js, not here; CSS never
+   sees them. Keep these in sync with the 'boreal' palette by eye. */
 :root {
   --void: #04060c;
   --frost: #cfe9ff;
   --verdant: #35e3a0;
 }
 
+/* Hard reset. box-sizing: border-box so every padding/border below counts
+   inward — panel widths stay predictable when we add stroke + padding. */
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
+/* Lock the viewport. overflow: hidden kills any scrollbar (a wallpaper never
+   scrolls), and the --void background paints the same near-black the WebGL
+   clear colour uses so there's no flash before the canvas draws its first frame. */
 html, body {
   width: 100%;
   height: 100%;
@@ -18,12 +32,17 @@ html, body {
 
 body {
   /* A wallpaper is not a document: nothing here should be selectable or draggable. */
+  /* -webkit- prefixes still matter — WebView2 is Chromium, but user-drag and the
+     tap-highlight suppression are only exposed under the prefixed names. */
   user-select: none;
   -webkit-user-select: none;
   -webkit-user-drag: none;
   -webkit-tap-highlight-color: transparent;
 }
 
+/* #stage is the one <canvas> three.js renders into. position: fixed + inset: 0
+   pins it to the full viewport; z-index: 0 puts it at the bottom of the stack so
+   every HTML overlay (clock, dock, settings, scene-name flash) layers above it. */
 #stage {
   position: fixed;
   inset: 0;
@@ -34,6 +53,9 @@ body {
 }
 
 /* ---------------------------------------------------------------- clock ---- */
+/* The optional on-screen clock (hud.js fills the text, config.hud.enabled shows
+   it). Hidden by default via the [hidden] attribute — see the .hud[hidden] rule
+   further down. pointer-events: none so it never eats a click meant for the dock. */
 
 .hud {
   position: fixed;
@@ -41,16 +63,26 @@ body {
   padding: clamp(24px, 4vmin, 64px);
   text-align: right;
   color: var(--frost);
+  /* Segoe UI Variable is the Windows 11 system face; the fallback chain degrades
+     to plain Segoe then system-ui on older/other OSes so text never boxes out. */
   font-family: "Segoe UI Variable Display", "Segoe UI Variable", "Segoe UI", system-ui, sans-serif;
+  /* Deep, wide shadow — the clock has to stay readable over a bright aurora band
+     or a pale starfield, so we bias toward a near-opaque void-coloured halo. */
   text-shadow: 0 2px 24px rgb(4 6 12 / 85%);
   pointer-events: none;
 }
 
+/* Corner placement. hud.js writes data-corner from config.hud.corner; each value
+   just repoints the `inset` shorthand (top/right/bottom/left) and flips the text
+   alignment so the block hugs whichever screen corner the user picked. */
 .hud[data-corner="top-left"]     { inset: 0 auto auto 0; text-align: left; }
 .hud[data-corner="top-right"]    { inset: 0 0 auto auto; text-align: right; }
 .hud[data-corner="bottom-left"]  { inset: auto auto 0 0; text-align: left; }
 .hud[data-corner="bottom-right"] { inset: auto 0 0 auto; text-align: right; }
 
+/* The big time readout. clamp() scales it with the viewport (44px phone-ish up to
+   132px on a 4K span). tabular-nums keeps every digit the same width so the line
+   doesn't jitter sideways as the minutes tick over. */
 .hud__time {
   font-size: clamp(44px, 7vmin, 132px);
   font-weight: 200;
@@ -60,6 +92,9 @@ body {
   opacity: 0.92;
 }
 
+/* The date line under it — small, wide-tracked, all caps. The heavy 0.42em
+   letter-spacing is the deliberate "kicker" look; low opacity keeps it secondary
+   to the time above. */
 .hud__date {
   margin-top: 0.7em;
   font-family: "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
@@ -71,6 +106,9 @@ body {
 }
 
 /* ------------------------------------------------------------- fallback ---- */
+/* Shown only when WebGL is missing/broken (main.js un-hides #fallback and the
+   canvas never draws). Centred vertically with the classic top: 50% +
+   translateY(-50%) trick so it doesn't depend on knowing its own height. */
 
 .fallback {
   position: fixed;
@@ -85,19 +123,30 @@ body {
   opacity: 0.7;
 }
 
+/* Both start life with the HTML [hidden] attribute. [hidden] alone gives
+   display: none, but any `display` we set elsewhere would override it — so we
+   restate display: none at this higher specificity to make the attribute win. */
 .fallback[hidden], .hud[hidden] { display: none; }
 
 /* ------------------------------------------------------------- dock ------ */
+/* The quick-switch bar of scene buttons that floats at the bottom-centre in
+   windowed/dev mode. Unlike the clock it IS interactive, so pointer-events: auto
+   and it sits at z-index 8 — above the canvas, below the settings panel (z 10). */
 
 .dock {
   position: fixed;
   left: 50%;
   bottom: 18px;
+  /* translateX(-50%) after left: 50% is the standard horizontal-centre for a
+     fixed element whose width we don't know. */
   transform: translateX(-50%);
   z-index: 8;
   max-width: calc(100vw - 24px);
   padding: 8px 10px 6px;
   border-radius: 18px;
+  /* Smoked-glass look: a translucent void fill plus backdrop-filter blur so the
+     moving scene behind it turns to a soft wash instead of a distraction. The
+     iris-tinted border is the one accent that ties the chrome to the palette. */
   background: rgb(8 12 24 / 62%);
   border: 1px solid rgb(110 91 255 / 28%);
   backdrop-filter: blur(14px);
@@ -107,6 +156,9 @@ body {
   user-select: none;
 }
 
+/* The button strip itself. flex-wrap so a long scene list folds onto a second
+   row rather than overflowing the screen; the min() cap keeps it from ever
+   touching the viewport edges. */
 .dock__row {
   display: flex;
   flex-wrap: wrap;
@@ -115,6 +167,9 @@ body {
   max-width: min(1100px, calc(100vw - 40px));
 }
 
+/* One pill per scene. flex: 0 0 auto stops them stretching to fill the row —
+   each stays the width of its label. border-radius: 999px is the "fully round
+   ends" trick (any value larger than half the height reads as a pill). */
 .dock button {
   flex: 0 0 auto;
   border: 1px solid rgb(110 91 255 / 35%);
@@ -127,9 +182,13 @@ body {
   cursor: pointer;
 }
 
+/* Hover = faint verdant tint; .is-on (the active scene, toggled by the dock JS)
+   = solid verdant fill with dark text, border removed so the fill reads clean. */
 .dock button:hover { background: rgb(53 227 160 / 16%); }
 .dock button.is-on { background: #35e3a0; color: #042016; border-color: transparent; }
 
+/* The tiny caption line under the pills (fps / palette name / hints). Muted
+   slate-blue, centred, deliberately small so it stays out of the way. */
 .dock__meta {
   margin: 4px 2px 0;
   font-size: 10px;
@@ -140,10 +199,16 @@ body {
 /* ------------------------------------------------------------- toast ----- */
 /* HTML overlays sit under WebView2's swap chain. Pulse hides #stage and can
    use this sibling canvas; every other scene draws the same pixels in WebGL. */
+/* In practice .overlay is the scene-name "flash" banner — a 2D <canvas> that
+   main.js (mountOverlay) draws the scene title + palette into for ~3.8s on every
+   switch, then fades out. It's a second full-screen canvas layered over #stage. */
 
 .overlay {
   position: fixed;
   inset: 0;
+  /* z-index: 20 — above the dock (8) and the settings panel (10) so the flash is
+     never obscured. pointer-events: none so this full-viewport layer doesn't
+     block clicks to anything beneath it while it's up. */
   z-index: 20;
   display: block;
   width: 100%;
@@ -152,10 +217,38 @@ body {
 }
 
 /* ------------------------------------------------------------- console ---- */
-/* Fluent Settings cards. In its own window it fills the frame (see .console-page).
-   Same console module as before — live sliders, SAVE vs discard, host actions. */
+/* The settings panel — "space glass": a slice of the wallpaper's own sky.
+   Two ways this panel shows up:
+     1. As a floating card over the live wallpaper (panel.js mounts .console into
+        index.html) — the default .console rules: translucent glass, the scene
+        blurred behind it, draggable.
+     2. As the whole settings window (console.html has <body class="console-page">
+        and console-main.js mounts the same markup) — the .console-page overrides
+        pin it to the frame and swap the blur for the panel's own baked starfield
+        (there's nothing behind an opaque window to blur). */
 
-.console-page { background: #202020; }
+/* Deep-space base for the standalone settings window. Same void the scene
+   clears to, plus the panel's baked stars, so the window reads as a slice of
+   the wallpaper rather than a grey OS dialog. */
+.console-page {
+  background:
+    radial-gradient(1px 1px at 12% 18%, rgb(207 233 255 / 22%), transparent 100%),
+    radial-gradient(1px 1px at 34% 8%, rgb(207 233 255 / 16%), transparent 100%),
+    radial-gradient(1.5px 1.5px at 58% 22%, rgb(157 176 200 / 20%), transparent 100%),
+    radial-gradient(1px 1px at 76% 12%, rgb(207 233 255 / 18%), transparent 100%),
+    radial-gradient(1px 1px at 90% 30%, rgb(157 176 200 / 14%), transparent 100%),
+    radial-gradient(1.5px 1.5px at 22% 42%, rgb(207 233 255 / 12%), transparent 100%),
+    radial-gradient(1px 1px at 47% 38%, rgb(157 176 200 / 12%), transparent 100%),
+    radial-gradient(1px 1px at 68% 52%, rgb(207 233 255 / 14%), transparent 100%),
+    radial-gradient(1px 1px at 8% 66%, rgb(157 176 200 / 10%), transparent 100%),
+    radial-gradient(1px 1px at 84% 74%, rgb(207 233 255 / 12%), transparent 100%),
+    radial-gradient(140% 100% at 50% 0%, #0a1122 0%, #05070f 62%);
+  background-attachment: fixed;
+  margin: 0;
+}
+
+/* When the panel IS the window: pin it to every edge, drop the card chrome
+   (border, radius, shadow) and the backdrop blur. */
 .console-page .console {
   position: fixed;
   inset: 0;
@@ -165,45 +258,73 @@ body {
   border: none;
   border-radius: 0;
   box-shadow: none;
-  background: #202020;
+  background: transparent;
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
 }
+
+/* No drag affordance on the title bar in window mode — the OS title bar moves it. */
 .console-page .console__bar { cursor: default; }
 
+/* The settings card itself. The --console-* custom properties are a mini design
+   system scoped to this component — every card, stroke, label and accent below
+   pulls from these, so the whole panel retunes from one place. The accents are
+   the scene's own verdant/iris pair; a faint aurora hairline runs under the
+   title bar and the starfield shows through the glass. */
 .console {
-  --console-text: #ffffff;
-  --console-muted: #9d9d9d;
-  --console-accent: #60cdff;
-  --console-card: rgb(43 43 43 / 92%);
-  --console-stroke: rgb(255 255 255 / 9%);
+  --console-text: #e8f1ff;
+  --console-muted: #8ea6c8;
+  --console-accent: #35e3a0;
+  --console-accent-2: #6e5bff;
+  --console-card: rgb(13 19 36 / 68%);
+  --console-stroke: rgb(139 160 220 / 14%);
+  --console-glow: rgb(53 227 160 / 35%);
   position: fixed;
   top: 48px;
   right: 48px;
+  /* z-index: 10 — above the dock (8), below the scene-name flash (20). */
   z-index: 10;
+  /* min() so it's 420px on a desktop but never wider than the viewport on a
+     small window; the max-height cap plus the scrolling body (below) keeps a
+     long settings list from running off the bottom of the screen. */
   width: min(420px, 94vw);
   max-height: min(86vh, 820px);
+  /* Column flex: fixed title bar, scrolling body, fixed footer. */
   display: flex;
   flex-direction: column;
   color: var(--console-text);
+  /* Space glass: a translucent deep-space fill with the wallpaper blurred and
+     slightly saturated behind it. The linear gradient keeps the panel darker at
+     the bottom so text contrast survives a bright aurora behind the top. */
   background:
-    linear-gradient(rgb(32 32 32 / 72%), rgb(28 28 28 / 78%)),
-    rgb(20 20 20 / 55%);
-  backdrop-filter: blur(40px) saturate(1.45);
-  -webkit-backdrop-filter: blur(40px) saturate(1.45);
+    radial-gradient(1px 1px at 20% 10%, rgb(207 233 255 / 16%), transparent 100%),
+    radial-gradient(1px 1px at 62% 6%, rgb(207 233 255 / 12%), transparent 100%),
+    radial-gradient(1px 1px at 86% 16%, rgb(157 176 200 / 10%), transparent 100%),
+    linear-gradient(180deg, rgb(9 13 26 / 78%), rgb(6 9 18 / 84%));
+  backdrop-filter: blur(40px) saturate(1.4);
+  -webkit-backdrop-filter: blur(40px) saturate(1.4);
   border: 1px solid var(--console-stroke);
-  border-radius: 12px;
+  border-radius: 14px;
+  /* Two-layer shadow: a tight dark line to crisp the edge against a bright
+     scene, then a wide soft drop for the float. */
   box-shadow:
     0 0 0 1px rgb(0 0 0 / 35%),
-    0 24px 64px rgb(0 0 0 / 45%);
+    0 24px 64px rgb(0 0 0 / 50%);
   font-family: "Segoe UI Variable Text", "Segoe UI Variable", "Segoe UI", system-ui, sans-serif;
   font-size: 13px;
   line-height: 1.4;
+  /* Clip the children to the rounded corners (the title bar / footer fills would
+     otherwise poke out square). */
   overflow: hidden;
 }
 
+/* panel.js toggles the [hidden] attribute to show/hide the floating card. */
 .console[hidden] { display: none; }
 
+/* Title bar. cursor: move signals it's the drag handle (panel.js runs the drag
+   when the card floats over the wallpaper; .console-page cancels that cursor).
+   The border-bottom is the aurora hairline — a 1px verdant→iris gradient, the
+   one accent that says "this chrome belongs to the scene". */
 .console__bar {
   display: flex;
   align-items: center;
@@ -211,33 +332,46 @@ body {
   padding: 12px 12px 12px 16px;
   cursor: move;
   user-select: none;
-  border-bottom: 1px solid var(--console-stroke);
-  background: rgb(255 255 255 / 3%);
+  border-bottom: 1px solid transparent;
+  border-image: linear-gradient(90deg, var(--console-accent), var(--console-accent-2), transparent) 1;
+  background: linear-gradient(180deg, rgb(255 255 255 / 4%), rgb(255 255 255 / 0%));
 }
 
+/* The status dot — a small "ship online" beacon. A slow pulse ring (the
+   keyframes below) keeps the panel feeling alive without stealing attention. */
 .console__dot {
   width: 10px;
   height: 10px;
   border-radius: 50%;
   background: var(--console-accent);
-  box-shadow: 0 0 0 3px rgb(96 205 255 / 18%);
+  box-shadow: 0 0 8px var(--console-glow);
+  animation: console-beacon 3.2s ease-out infinite;
 }
 
+@keyframes console-beacon {
+  0%   { box-shadow: 0 0 0 0 rgb(53 227 160 / 30%); }
+  70%  { box-shadow: 0 0 0 7px rgb(53 227 160 / 0%); }
+  100% { box-shadow: 0 0 0 0 rgb(53 227 160 / 0%); }
+}
+
+/* Panel title text. flex: 1 makes it eat the space between the dot and the
+   close button. */
 .console__name {
   flex: 1;
-  font-family: "Segoe UI Variable Display", "Segoe UI Variable", "Segoe UI", sans-serif;
+  font-family: "Segoe UI Variable Display", "Segoe UI Variable", sans-serif;
   font-size: 16px;
   font-weight: 600;
-  letter-spacing: -0.01em;
+  letter-spacing: 0.01em;
   opacity: 0.96;
 }
 
+/* Close button — a 32px square hit target, chrome-less until hovered. */
 .console__x {
   width: 32px;
   height: 32px;
   padding: 0;
   border: none;
-  border-radius: 6px;
+  border-radius: 8px;
   background: transparent;
   color: inherit;
   font: inherit;
@@ -246,37 +380,48 @@ body {
   cursor: pointer;
 }
 
+/* Hover turns it the Windows "close = red" colour (#e81123), matching the OS
+   title-bar close button so the gesture feels native. */
 .console__x:hover { background: rgb(232 17 35 / 85%); color: #fff; }
 
+/* The scroll region between title bar and footer. flex: 1 makes it absorb all
+   the leftover height; overflow-y: auto gives it its own scrollbar so the bar
+   and footer stay put. */
 .console__body {
   flex: 1;
   overflow-y: auto;
   padding: 12px 16px 18px;
   scrollbar-width: thin;
-  scrollbar-color: rgb(255 255 255 / 22%) transparent;
+  scrollbar-color: rgb(139 160 220 / 25%) transparent;
 }
 
+/* WebView2 = Chromium, so style the actual scrollbar: a thin track, a faint
+   rounded thumb with an aurora tint, no arrows. */
 .console__body::-webkit-scrollbar { width: 8px; }
 .console__body::-webkit-scrollbar-thumb {
-  background: rgb(255 255 255 / 20%);
+  background: linear-gradient(180deg, rgb(53 227 160 / 30%), rgb(110 91 255 / 30%));
   border-radius: 8px;
 }
 
+/* One settings "card". Glass over the panel fill: a hairline stroke, a rounded
+   10px frame, and overflow: hidden so row hovers clip to the corners. */
 .console__card {
   margin: 0 0 12px;
   padding: 4px 0 6px;
   background: var(--console-card);
   border: 1px solid var(--console-stroke);
-  border-radius: 8px;
+  border-radius: 10px;
   overflow: hidden;
 }
 
+/* Card heading. Space-console style: semibold body text with a wide-tracked
+   small-caps whisper of colour, quieter than Win11 Fluent headers. */
 .console__group {
   margin: 0;
   padding: 10px 14px 6px;
   letter-spacing: 0;
   text-transform: none;
-  font-size: 13px;
+  font-size: 12.5px;
   font-weight: 600;
   color: var(--console-text);
   opacity: 1;
@@ -284,6 +429,39 @@ body {
 
 .console__group:first-child { margin-top: 0; }
 
+/* Folded cards (the fine-tune knobs): a real <details>/<summary>, so keyboard
+   and screen-reader behaviour come free. The summary gets a chevron that swings
+   open on [open]; rows inside sit below like any other card's. */
+.console__card--fold { padding-bottom: 4px; }
+
+.console__card--fold > summary.console__group {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  list-style: none;
+  color: var(--console-muted);
+  padding-right: 12px;
+  user-select: none;
+}
+
+/* Chromium still draws its own disclosure triangle unless told not to. */
+.console__card--fold > summary.console__group::-webkit-details-marker { display: none; }
+
+.console__card--fold > summary.console__group::after {
+  content: "›";
+  font-size: 16px;
+  line-height: 1;
+  color: var(--console-muted);
+  transition: transform 0.16s ease;
+}
+
+.console__card--fold[open] > summary.console__group::after { transform: rotate(90deg); }
+.console__card--fold[open] > summary.console__group { color: var(--console-text); }
+.console__card--fold > summary.console__group:hover { color: var(--console-text); }
+
+/* The explanatory sub-text under a group heading (or the Library intro). Muted
+   colour, tighter size — reads as a caption, not a control. */
 .console__note {
   margin: 0;
   padding: 4px 14px 10px;
@@ -292,6 +470,9 @@ body {
   line-height: 1.45;
 }
 
+/* One control row inside a card. Two-column grid: a fixed 108px label gutter and
+   the control filling the rest. min-height: 40px is the touch-row height; the
+   6px side margin insets the hover highlight from the card edge. */
 .console__row {
   display: grid;
   grid-template-columns: 108px 1fr;
@@ -300,25 +481,41 @@ body {
   min-height: 40px;
   margin: 0 6px;
   padding: 4px 8px;
-  border-radius: 6px;
+  border-radius: 8px;
 }
 
-.console__row:hover { background: rgb(255 255 255 / 4%); }
+.console__row:hover { background: rgb(139 160 220 / 7%); }
 
+/* Toggle rows flip the grid: label takes all the free space (1fr) and the
+   switch hugs the right edge (auto). */
 .console__row--toggle { grid-template-columns: 1fr auto; }
 
+/* Two-line label column (label + hint caption), used by Library toggles. */
+.console__labelbox {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+/* Row label. nowrap so a long name never wraps into two lines and breaks the
+   fixed 40px row rhythm — it just clips against the control column instead. */
 .console__label {
   font-size: 13px;
   opacity: 0.92;
   white-space: nowrap;
 }
 
+/* A yellow " *" appended to a label marks a setting that only takes effect after
+   a scene reload (the JS adds .console__row--reload). */
 .console__row--reload .console__label::after {
   content: " *";
   color: #fce100;
   opacity: 0.95;
 }
 
+/* Slider control: the <input type=range> fills the row, then a fixed 44px column
+   holds the live numeric readout so the number never shifts as you drag. */
 .console__slider {
   display: grid;
   grid-template-columns: 1fr 44px;
@@ -326,6 +523,8 @@ body {
   gap: 8px;
 }
 
+/* The number beside a slider. tabular-nums + right-align so 0.9 and 0.95 line up
+   on the decimal and the column doesn't twitch. */
 .console__value {
   font-variant-numeric: tabular-nums;
   font-size: 12px;
@@ -333,83 +532,109 @@ body {
   color: var(--console-muted);
 }
 
+/* Range input, restyled from scratch. appearance: none strips the native widget
+   so the element becomes just the 4px track; the thumb is drawn by the
+   pseudo-element below. */
 .console input[type="range"] {
   -webkit-appearance: none;
   appearance: none;
   width: 100%;
   height: 4px;
-  background: rgb(255 255 255 / 18%);
+  background: rgb(139 160 220 / 22%);
   border-radius: 999px;
   outline: none;
 }
 
+/* The draggable thumb: a verdant core with an iris ring and a soft glow — the
+   aurora pair again, so dragging feels like pushing light along the track. */
 .console input[type="range"]::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 22px;
-  height: 22px;
+  width: 18px;
+  height: 18px;
   border-radius: 50%;
   background: var(--console-accent);
-  border: 4px solid #2b2b2b;
-  box-shadow: 0 1px 4px rgb(0 0 0 / 40%);
+  border: 2px solid #0a0f1e;
+  box-shadow:
+    0 0 0 1px rgb(110 91 255 / 50%),
+    0 0 10px var(--console-glow);
   cursor: pointer;
 }
 
+/* Colour swatch (palette pickers). We keep the native colour dialog but box the
+   trigger to match the other controls. */
 .console input[type="color"] {
   width: 100%;
   height: 28px;
   padding: 0;
   border: 1px solid var(--console-stroke);
-  border-radius: 6px;
+  border-radius: 8px;
   background: transparent;
   cursor: pointer;
 }
 
+/* The toggle switch, built from a bare checkbox. appearance: none turns it into
+   a 42x22 rounded pill (the track); position: relative anchors the knob. */
 .console input[type="checkbox"] {
-  width: 40px;
-  height: 20px;
+  width: 42px;
+  height: 22px;
   appearance: none;
   -webkit-appearance: none;
   border-radius: 999px;
-  background: rgb(255 255 255 / 18%);
+  background: rgb(139 160 220 / 22%);
   position: relative;
   cursor: pointer;
   transition: background 0.16s ease;
 }
 
+/* ::after is the knob — an 16px circle inset 3px from the left edge of the
+   track. Its transform is transitioned so it slides rather than jumps. */
 .console input[type="checkbox"]::after {
   content: "";
   position: absolute;
-  top: 2px;
-  left: 2px;
+  top: 3px;
+  left: 3px;
   width: 16px;
   height: 16px;
   border-radius: 50%;
-  background: #fff;
-  box-shadow: 0 1px 3px rgb(0 0 0 / 35%);
+  background: #dfe9fb;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 40%);
   transition: transform 0.16s ease;
 }
 
+/* Checked = the track lights up with the aurora gradient... */
 .console input[type="checkbox"]:checked {
-  background: var(--console-accent);
+  background: linear-gradient(90deg, var(--console-accent), var(--console-accent-2));
 }
 
+/* ...and the knob slides right (track 42 − knob 16 − 3px margin each side). */
 .console input[type="checkbox"]:checked::after {
   transform: translateX(20px);
+  background: #04121a;
 }
 
+/* Dropdown. appearance: none plus a baked chevron (the OS draws the option list
+   itself, which is fine — it's already dark). */
 .console select {
   width: 100%;
-  padding: 6px 10px;
+  padding: 6px 30px 6px 10px;
   border: 1px solid var(--console-stroke);
-  border-radius: 6px;
-  background: rgb(0 0 0 / 28%);
+  border-radius: 8px;
+  appearance: none;
+  -webkit-appearance: none;
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%238ea6c8' stroke-width='1.4' fill='none' stroke-linecap='round'/%3E%3C/svg%3E") no-repeat right 10px center,
+    rgb(4 6 12 / 45%);
   color: inherit;
   font: inherit;
   font-size: 13px;
   cursor: pointer;
 }
 
+.console select:hover { border-color: rgb(139 160 220 / 30%); }
+
+/* A "command" row — a full-width clickable button that navigates or fires a
+   host action (the chevron variant of a settings row). */
 .console__command {
   display: flex;
   align-items: center;
@@ -418,7 +643,7 @@ body {
   margin: 0 6px;
   padding: 10px 10px;
   border: none;
-  border-radius: 6px;
+  border-radius: 8px;
   background: transparent;
   color: inherit;
   font: inherit;
@@ -426,8 +651,11 @@ body {
   cursor: pointer;
 }
 
-.console__command:hover { background: rgb(255 255 255 / 6%); }
+.console__command:hover { background: rgb(139 160 220 / 10%); }
 
+/* The stacked title + hint inside a command row. min-width: 0 lets this flex
+   item shrink below its content width so a long hint can ellipsis instead of
+   pushing the chevron off the edge. */
 .console__command-text {
   flex: 1;
   display: flex;
@@ -436,17 +664,22 @@ body {
   min-width: 0;
 }
 
+/* Secondary line under a command title (and the caption under toggle labels). */
 .console__hint {
   font-size: 11px;
   color: var(--console-muted);
 }
 
+/* The ">" affordance on a command row — points to the fact that clicking it goes
+   somewhere. */
 .console__chevron {
   color: var(--console-muted);
   font-size: 18px;
   line-height: 1;
 }
 
+/* Wrapping row of small buttons for the host-action group (open folder, restart,
+   etc.) — a plain flex-wrap grid, not the label/control row layout. */
 .console__hostgrid {
   display: flex;
   flex-wrap: wrap;
@@ -454,11 +687,13 @@ body {
   padding: 6px 12px 10px;
 }
 
+/* The config-file path line near the bottom. user-select: text is deliberate —
+   it's the one thing in the panel you might want to copy. */
 .console__ref {
   padding: 6px 16px;
   border-top: 1px solid var(--console-stroke);
   font-size: 11px;
-  letter-spacing: 0;
+  letter-spacing: 0.02em;
   color: var(--console-muted);
   user-select: text;
   white-space: nowrap;
@@ -466,6 +701,8 @@ body {
   text-overflow: ellipsis;
 }
 
+/* Sticky footer bar — outside .console__body so it never scrolls. space-between
+   puts the status text on the left and the action buttons on the right. */
 .console__foot {
   display: flex;
   align-items: center;
@@ -473,9 +710,11 @@ body {
   gap: 10px;
   padding: 10px 14px 12px;
   border-top: 1px solid var(--console-stroke);
-  background: rgb(255 255 255 / 3%);
+  background: linear-gradient(180deg, rgb(255 255 255 / 2%), rgb(255 255 255 / 0%));
 }
 
+/* Left-side status text — e.g. "unsaved changes" / "saved". Muted by default;
+   the JS can colour it when there's something pending. */
 .console__stat {
   font-size: 12px;
   color: var(--console-muted);
@@ -483,11 +722,12 @@ body {
 
 .console__actions { display: flex; gap: 8px; }
 
+/* Footer button, default (secondary) style — ghost glass. */
 .console__btn {
   padding: 6px 12px;
   border: 1px solid var(--console-stroke);
-  border-radius: 6px;
-  background: rgb(255 255 255 / 6%);
+  border-radius: 8px;
+  background: rgb(139 160 220 / 8%);
   color: inherit;
   font: inherit;
   font-size: 12px;
@@ -495,13 +735,20 @@ body {
   cursor: pointer;
 }
 
-.console__btn:hover { background: rgb(255 255 255 / 12%); }
-
-.console__btn--go {
-  border-color: transparent;
-  background: var(--console-accent);
-  color: #001a2e;
-  font-weight: 600;
+.console__btn:hover {
+  background: rgb(139 160 220 / 16%);
+  border-color: rgb(139 160 220 / 28%);
 }
 
-.console__btn--go:hover { filter: brightness(1.08); }
+/* --go = the primary "SAVE" button: the full aurora gradient, near-black text,
+   and a soft outer glow so the eye lands on it. */
+.console__btn--go {
+  border-color: transparent;
+  background: linear-gradient(120deg, var(--console-accent), var(--console-accent-2));
+  color: #04121a;
+  font-weight: 600;
+  box-shadow: 0 0 14px rgb(53 227 160 / 22%);
+}
+
+/* Hover brightens the gradient rather than swapping colours. */
+.console__btn--go:hover { filter: brightness(1.12); }

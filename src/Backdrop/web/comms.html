@@ -1,32 +1,79 @@
+<!--
+  comms.html — the skeleton for the "Comms" uplink panel (Win+C). This is just the
+  static DOM; all behaviour lives in js/comms.js, which grabs each element below by id.
+  Loaded by CommsWindow's own WebView2 as https://backdrop.invalid/comms.html?v=8 —
+  the ?v=8 is a cache-buster the C# side bumps whenever this file or its assets change.
+-->
 <!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <!-- Force dark form controls / scrollbars. The whole panel is a dark glass card; a
+       light default <select> dropdown would look wrong against it. -->
   <meta name="color-scheme" content="dark" />
   <title>Comms</title>
-  <link rel="stylesheet" href="./comms.css?v=8" />
+  <!-- Same ?v=8 cache-buster as the module import below — keep the two numbers in step
+       so a redeploy never serves new HTML with a stale stylesheet from WebView2's cache. -->
+  <link rel="stylesheet" href="./comms.css?v=9" />
 </head>
 <body>
+  <!-- Header strip. id="drag" IS the drag bar: the WPF window is chromeless
+       (WindowStyle=None), so comms.js listens for pointerdown here and posts {type:"drag"}
+       to the host, which runs the OS window-move loop. A press that lands on the <select>
+       or a <button> is ignored by that handler (event.target.closest check) so the real
+       controls still work. See the KNOWN BUG note further down. -->
   <header class="bar" id="drag">
+    <!-- Decorative "carrier" dot; turned verdant green by CSS for the space theme. -->
     <span class="mark">●</span>
     <span>COMMS</span>
+    <!-- Model picker. comms.js clears this single placeholder <option> and rebuilds the
+         list (chat + image <optgroup>s) from the host's 'llm-models' message after boot.
+         Its value feeds every outgoing turn; empty means "let the host pick its default". -->
     <select id="model" title="Switch model" aria-label="Model">
       <option value="llama-70b">llama-70b</option>
     </select>
+    <!-- NEW wipes the transcript + history; ✕ asks the host to close the window (the page
+         can't close its own top-level WPF window). comms.js wires both by id. -->
     <button type="button" id="newchat" title="New chat">NEW</button>
     <button type="button" id="close" title="Close">✕</button>
   </header>
+  <!-- Status line. comms.js rewrites this from 'llm-status' messages and on model change —
+       it's a " · "-joined list of tokens like "CARRIER llama-70b · <host info>". -->
   <p class="meta" id="meta">NO CARRIER</p>
+  <!-- The transcript container. comms.js appends one <li> per turn (classes you / ship /
+       sys) and keeps it scrolled to the bottom; it's the flex:1 scroll region between the
+       header and the compose bar. -->
   <ol class="log" id="log"></ol>
+  <!-- Staged-attachment pills. Starts hidden; comms.js unhides and fills it while files are
+       queued for the next message, then hides it again so it takes no vertical space. -->
   <ul class="chips" id="chips" hidden></ul>
+  <!-- Compose bar. Submitting (SEND or Enter in #input) is the main "transmit" path in
+       comms.js: it reads #input.value, handles a typed "/imagine …", and queues the turn. -->
   <form class="compose" id="form">
+    <!-- Hidden native file picker. The 📎 button calls .click() on it; its change event
+         hands the files to comms.js's uploadFiles(). Kept out of layout with `hidden`. -->
     <input id="file" type="file" multiple hidden />
     <button type="button" id="attach" title="Attach files">📎</button>
     <button type="button" id="imagine" title="Generate an image">IMG</button>
+    <!-- The text field comms.js reads on submit. autocomplete/spellcheck off because this
+         is a command line, not prose. -->
     <input id="input" type="text" autocomplete="off" spellcheck="false" placeholder="transmit…  /imagine a nebula" />
     <button type="submit">SEND</button>
   </form>
-  <script type="module" src="./js/comms.js?v=8"></script>
+
+  <!--
+    INPUT + DRAG — fixed. The old transparency bug (typing in #input did nothing,
+    header drag was flaky) lived entirely on the C# side: CommsWindow used to be a
+    layered AllowsTransparency window, whose child-HWND airspace boundary ate
+    keyboard focus and mouse capture. The window is opaque again (see
+    CommsWindow.xaml / .cs), every activation forwards focus into the WebView2,
+    and the non-client frame is recomputed so the caption-drag engages first try.
+    Nothing in this markup or comms.css was ever involved.
+  -->
+
+  <!-- The one script. type="module" so it can `import` host.js; ?v=9 cache-buster —
+       bump alongside the stylesheet version and the C# Navigate() URL. -->
+  <script type="module" src="./js/comms.js?v=9"></script>
 </body>
 </html>

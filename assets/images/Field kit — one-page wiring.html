@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<!-- saved from url=(0080)file:///C:/Users/blyat/Documents/esp32wroom-packetcapoffline/docs/field-kit.html -->
+<html lang="en"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Field kit — one-page wiring</title>
+<style>
+:root {
+  --bg:#05080c; --fg:#d7f7e3; --dim:#7aa38a; --acc:#2eff7b;
+  --gold:#ffcf5c; --red:#ff6b6b; --cyan:#4fd6ff; --vio:#c792ea;
+  --line:#1b3a28; --panel:#0a1210;
+  --mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
+}
+* { box-sizing:border-box; }
+body { margin:0; background:var(--bg); color:var(--fg); font:15px/1.5 var(--mono); padding:24px 20px 64px; }
+h1 { color:var(--acc); letter-spacing:2px; margin:0 0 8px; }
+h2 { color:var(--gold); border-bottom:1px solid var(--line); padding-bottom:6px; margin:2em 0 12px; }
+h3 { margin:0 0 8px; font-size:15px; color:var(--acc); }
+.muted { color:var(--dim); }
+.warn { color:var(--red); font-weight:bold; }
+section { background:var(--panel); border:1px solid var(--line); padding:16px 18px; margin:16px 0; }
+table { width:100%; border-collapse:collapse; font-size:13px; }
+th,td { border-bottom:1px solid var(--line); padding:5px 8px; text-align:left; vertical-align:top; }
+th { color:var(--dim); font-weight:normal; }
+code { color:var(--gold); }
+.legend span { display:inline-flex; align-items:center; margin:0 14px 6px 0; font-size:13px; }
+.swatch { display:inline-block; width:16px; height:16px; border-radius:3px; margin-right:6px; border:1px solid #000; }
+.row { display:flex; flex-wrap:wrap; gap:24px; align-items:flex-start; }
+.row > div { flex:1 1 340px; }
+svg { width:100%; height:auto; background:#07100c; border:1px solid var(--line); display:block; }
+ol li, ul li { margin:8px 0; }
+.flow { display:flex; flex-wrap:wrap; gap:10px; align-items:stretch; margin:10px 0; }
+.flow .box { background:#0e1a14; border:1px solid var(--line); padding:10px 14px; text-align:center; flex:1 1 160px; }
+.flow .box small { display:block; color:var(--dim); font-size:11px; margin-top:4px; }
+.flow .arr { align-self:center; color:var(--gold); }
+.pill { border:1px solid var(--line); padding:3px 10px; font-size:12px; color:var(--dim); margin:0 6px 6px 0; display:inline-block; }
+.pill.on { color:var(--acc); border-color:#2eff7b44; }
+.pill.busy { color:var(--gold); border-color:#ffcf5c44; }
+footer { margin-top:32px; }
+</style>
+</head>
+<body>
+
+<header>
+<h1>FIELD KIT — ONE PAGE</h1>
+<p class="muted">ESP32-WROOM DevKit V1 ×2 + E07-M1101D (CC1101 433 MHz, 8-pin) + NEO-6M + 4-button pad.
+Female Dupont jumpers only, 33 AWG for holes / missing pins, no solder. Nothing is flashed until this matches your boards.</p>
+<p><span class="pill on">SNIFFER ESP32-WROOM-01</span><span class="pill on">RELAY ESP32-RELAY-01</span><span class="pill busy">E07-M1101D ×2</span><span class="pill busy">NEO-6M</span><span class="pill busy">4 BUTTONS</span><span class="pill">3.3 V ONLY</span></p>
+<p class="warn">3.3 V only on the radio and GPS. Never VIN / 5 V.</p>
+</header>
+
+<section>
+<h2>0. Wire colors — every line below is one physical wire</h2>
+<p class="legend">
+<span><i class="swatch" style="background:#2e2e2e;border-color:#8a8a8a"></i>BLK — GND</span>
+<span><i class="swatch" style="background:#e23d3d"></i>RED — 3V3</span>
+<span><i class="swatch" style="background:#e8e8e8"></i>WHT — GDO0</span>
+<span><i class="swatch" style="background:#ff8c3a"></i>ORG — CSN</span>
+<span><i class="swatch" style="background:#e6c84a"></i>YEL — SCK</span>
+<span><i class="swatch" style="background:#3d8bff"></i>BLU — MOSI</span>
+<span><i class="swatch" style="background:#2eff7b"></i>GRN — MISO</span>
+<span><i class="swatch" style="background:#c792ea"></i>PUR — GPS TX</span>
+<span><i class="swatch" style="background:#a8b0b8"></i>GRY — buttons</span>
+</p>
+<div class="flow">
+  <div class="box">BUTTONS<small>32 33 25 27 → GND</small></div>
+  <div class="arr">→</div>
+  <div class="box">SNIFFER<small>Wi-Fi sniff / AP · CC1101 SPI · GPS UART2</small></div>
+  <div class="arr">433 MHz</div>
+  <div class="box">RELAY<small>Wi-Fi to cloud · same radio pins</small></div>
+</div>
+</section>
+
+<section>
+<h2>1. SNIFFER — full wiring map (USB at the bottom)</h2>
+<p class="muted">DOIT ESP32 DevKit V1, 30-pin. Every colored line is one female Dupont. Dashed stubs stay unconnected.</p>
+
+<svg viewBox="0 0 1500 980" xmlns="http://www.w3.org/2000/svg" aria-label="Sniffer wiring diagram" font-family="Consolas, monospace">
+
+  <!-- ================= GPS NEO-6M ================= -->
+  <rect x="80" y="40" width="220" height="150" rx="6" fill="#101c2a" stroke="#4fd6ff"></rect>
+  <text x="190" y="60" text-anchor="middle" fill="#4fd6ff" font-size="13">NEO-6M GPS</text>
+  <rect x="105" y="72" width="64" height="64" fill="#26374d" stroke="#4fd6ff"></rect>
+  <text x="137" y="108" text-anchor="middle" fill="#4fd6ff" font-size="9">patch ↑sky</text>
+  <circle cx="235" cy="120" r="24" fill="#cfd6cf" stroke="#888"></circle>
+  <text x="235" y="124" text-anchor="middle" fill="#333" font-size="9">CR2032</text>
+  <g font-size="11">
+    <text x="290" y="79" text-anchor="end" fill="#e23d3d">VCC</text>
+    <text x="290" y="109" text-anchor="end" fill="#9aa">GND</text>
+    <text x="290" y="139" text-anchor="end" fill="#c792ea">TX</text>
+    <text x="290" y="169" text-anchor="end" fill="#557465">RX</text>
+  </g>
+  <rect x="300" y="62" width="8" height="116" fill="#1a1a1a"></rect>
+  <text x="190" y="212" text-anchor="middle" fill="#7aa38a" font-size="10">first fix outdoors 1–5 min</text>
+
+  <!-- ================= E07-M1101D radio ================= -->
+  <line x1="190" y1="222" x2="190" y2="150" stroke="#ffcf5c" stroke-width="5"></line>
+  <circle cx="190" cy="230" r="9" fill="#ffcf5c" stroke="#806a20"></circle>
+  <text x="205" y="185" fill="#ffcf5c" font-size="10">433 ANT — screw on before power</text>
+  <rect x="80" y="230" width="220" height="400" rx="6" fill="#0f1f14" stroke="#ffcf5c"></rect>
+  <text x="190" y="254" text-anchor="middle" fill="#ffcf5c" font-size="13">E07-M1101D</text>
+  <text x="190" y="270" text-anchor="middle" fill="#7aa38a" font-size="10">CC1101 · 433 MHz · 8-pin</text>
+  <rect x="120" y="300" width="140" height="160" fill="#233026" stroke="#3a4a3c"></rect>
+  <text x="190" y="385" text-anchor="middle" fill="#7aa38a" font-size="11">CC1101</text>
+  <g font-size="11">
+    <text x="290" y="284" text-anchor="end" fill="#9aa">1 GND</text>
+    <text x="290" y="328" text-anchor="end" fill="#e23d3d">2 VCC</text>
+    <text x="290" y="372" text-anchor="end" fill="#e8e8e8">3 GDO0</text>
+    <text x="290" y="416" text-anchor="end" fill="#ff8c3a">4 CSN</text>
+    <text x="290" y="460" text-anchor="end" fill="#e6c84a">5 SCK</text>
+    <text x="290" y="504" text-anchor="end" fill="#3d8bff">6 MOSI</text>
+    <text x="290" y="548" text-anchor="end" fill="#2eff7b">7 MISO</text>
+    <text x="290" y="592" text-anchor="end" fill="#557465">8 GDO2</text>
+  </g>
+  <rect x="300" y="272" width="8" height="326" fill="#1a1a1a"></rect>
+
+  <!-- ================= ESP32 sniffer ================= -->
+  <rect x="560" y="70" width="340" height="780" rx="10" fill="#0d1a14" stroke="#2eff7b" stroke-width="2"></rect>
+  <text x="730" y="96" text-anchor="middle" fill="#2eff7b" font-size="14">ESP32-WROOM-01 · SNIFFER</text>
+  <text x="730" y="114" text-anchor="middle" fill="#7aa38a" font-size="10">DevKit V1 · USB at the bottom</text>
+  <rect x="640" y="300" width="180" height="240" fill="#3a3f3a" stroke="#566"></rect>
+  <text x="730" y="426" text-anchor="middle" fill="#d7f7e3" font-size="12">WROOM-32</text>
+  <circle cx="600" cy="815" r="9" fill="#123" stroke="#7aa38a"></circle><text x="600" y="840" text-anchor="middle" fill="#557465" font-size="9">BOOT</text>
+  <circle cx="858" cy="815" r="9" fill="#123" stroke="#7aa38a"></circle><text x="858" y="840" text-anchor="middle" fill="#557465" font-size="9">EN</text>
+  <rect x="700" y="840" width="60" height="34" rx="4" fill="#222" stroke="#4fd6ff"></rect>
+  <text x="730" y="862" text-anchor="middle" fill="#4fd6ff" font-size="11">USB</text>
+
+  <rect x="560" y="132" width="8" height="688" fill="#1a1a1a"></rect>
+  <rect x="892" y="132" width="8" height="688" fill="#1a1a1a"></rect>
+
+  <!-- left pin labels -->
+  <g font-size="12" text-anchor="end">
+    <text x="548" y="144" fill="#e23d3d">3V3 — radio+GPS</text>
+    <text x="548" y="192" fill="#9aa">GND — radio+GPS</text>
+    <text x="548" y="240" fill="#557465">15</text>
+    <text x="548" y="288" fill="#b04a4a">2 (boot)</text>
+    <text x="548" y="336" fill="#e8e8e8">4 GDO0</text>
+    <text x="548" y="384" fill="#c792ea">16 GPS-RX</text>
+    <text x="548" y="432" fill="#557465">17 free</text>
+    <text x="548" y="480" fill="#ff8c3a">5 CSN</text>
+    <text x="548" y="528" fill="#e6c84a">18 SCK</text>
+    <text x="548" y="576" fill="#2eff7b">19 MISO</text>
+    <text x="548" y="624" fill="#557465">21 free · I2C</text>
+    <text x="548" y="672" fill="#4fd6ff">3 RX0 · USB</text>
+    <text x="548" y="720" fill="#4fd6ff">1 TX0 · USB</text>
+    <text x="548" y="768" fill="#557465">22 free · I2C</text>
+    <text x="548" y="816" fill="#3d8bff">23 MOSI</text>
+  </g>
+  <!-- right pin labels -->
+  <g font-size="12" text-anchor="start">
+    <text x="910" y="144" fill="#ff6b6b">VIN 5V — NEVER</text>
+    <text x="910" y="192" fill="#9aa">GND — btn common</text>
+    <text x="910" y="240" fill="#557465">13 free</text>
+    <text x="910" y="288" fill="#b04a4a">12 strap</text>
+    <text x="910" y="336" fill="#557465">14 free</text>
+    <text x="910" y="384" fill="#a8b0b8">27 BTN4 apmode</text>
+    <text x="910" y="432" fill="#557465">26 free · buzzer</text>
+    <text x="910" y="480" fill="#a8b0b8">25 BTN3 capstart</text>
+    <text x="910" y="528" fill="#a8b0b8">33 BTN2 scan</text>
+    <text x="910" y="576" fill="#a8b0b8">32 BTN1 reboot</text>
+    <text x="910" y="624" fill="#557465">35 in-only</text>
+    <text x="910" y="672" fill="#557465">34 in-only</text>
+    <text x="910" y="720" fill="#557465">39 in-only</text>
+    <text x="910" y="768" fill="#557465">36 in-only</text>
+    <text x="910" y="816" fill="#557465">EN</text>
+  </g>
+
+  <!-- ================= 4-button pad ================= -->
+  <rect x="1180" y="280" width="240" height="340" rx="6" fill="#141018" stroke="#a8b0b8"></rect>
+  <text x="1300" y="304" text-anchor="middle" fill="#a8b0b8" font-size="13">4-BUTTON PAD</text>
+  <rect x="1170" y="312" width="8" height="232" fill="#1a1a1a"></rect>
+  <g font-size="11" text-anchor="start">
+    <text x="1186" y="324" fill="#9aa">COM</text>
+    <text x="1186" y="384" fill="#a8b0b8">K4</text>
+    <text x="1186" y="434" fill="#a8b0b8">K3</text>
+    <text x="1186" y="484" fill="#a8b0b8">K2</text>
+    <text x="1186" y="534" fill="#a8b0b8">K1</text>
+  </g>
+  <g stroke="#a8b0b8" fill="#1c1824">
+    <circle cx="1320" cy="360" r="22"></circle>
+    <circle cx="1320" cy="420" r="22"></circle>
+    <circle cx="1320" cy="480" r="22"></circle>
+    <circle cx="1320" cy="540" r="22"></circle>
+  </g>
+  <g fill="#a8b0b8" font-size="13" text-anchor="middle">
+    <text x="1320" y="365">4</text><text x="1320" y="425">3</text>
+    <text x="1320" y="485">2</text><text x="1320" y="545">1</text>
+  </g>
+  <g fill="#7aa38a" font-size="10" text-anchor="start">
+    <text x="1356" y="364">apmode</text>
+    <text x="1356" y="424">capstart</text>
+    <text x="1356" y="484">scan</text>
+    <text x="1356" y="544">reboot</text>
+  </g>
+  <text x="1300" y="648" text-anchor="middle" fill="#7aa38a" font-size="10">momentary → GND · INPUT_PULLUP · no VCC pin needed</text>
+
+  <!-- ================= WIRES left side ================= -->
+  <!-- GPS wires -->
+  <path d="M304,75 C434,75 434,140 564,140" stroke="#000" stroke-opacity="0.55" stroke-width="7" fill="none"></path>
+  <path d="M304,75 C434,75 434,140 564,140" stroke="#e23d3d" stroke-width="3.5" fill="none"></path>
+  <path d="M304,105 C434,105 434,188 564,188" stroke="#000" stroke-opacity="0.55" stroke-width="7" fill="none"></path>
+  <path d="M304,105 C434,105 434,188 564,188" stroke="#6a6a6a" stroke-width="3.5" fill="none"></path>
+  <path d="M304,135 C434,135 434,380 564,380" stroke="#000" stroke-opacity="0.55" stroke-width="7" fill="none"></path>
+  <path d="M304,135 C434,135 434,380 564,380" stroke="#c792ea" stroke-width="3.5" fill="none"></path>
+  <path d="M304,165 L342,165" stroke="#557465" stroke-width="2" stroke-dasharray="4 3" fill="none"></path>
+  <text x="348" y="169" fill="#557465" font-size="10">nc</text>
+  <!-- radio wires -->
+  <path d="M304,280 C434,280 434,188 564,188" stroke="#000" stroke-opacity="0.55" stroke-width="7" fill="none"></path>
+  <path d="M304,280 C434,280 434,188 564,188" stroke="#6a6a6a" stroke-width="3.5" fill="none"></path>
+  <path d="M304,324 C434,324 434,140 564,140" stroke="#000" stroke-opacity="0.55" stroke-width="7" fill="none"></path>
+  <path d="M304,324 C434,324 434,140 564,140" stroke="#e23d3d" stroke-width="3.5" fill="none"></path>
+  <path d="M304,368 C434,368 434,332 564,332" stroke="#000" stroke-opacity="0.55" stroke-width="7" fill="none"></path>
+  <path d="M304,368 C434,368 434,332 564,332" stroke="#e8e8e8" stroke-width="3.5" fill="none"></path>
+  <path d="M304,412 C434,412 434,476 564,476" stroke="#000" stroke-opacity="0.55" stroke-width="7" fill="none"></path>
+  <path d="M304,412 C434,412 434,476 564,476" stroke="#ff8c3a" stroke-width="3.5" fill="none"></path>
+  <path d="M304,456 C434,456 434,524 564,524" stroke="#000" stroke-opacity="0.55" stroke-width="7" fill="none"></path>
+  <path d="M304,456 C434,456 434,524 564,524" stroke="#e6c84a" stroke-width="3.5" fill="none"></path>
+  <path d="M304,500 C400,500 400,812 564,812" stroke="#000" stroke-opacity="0.55" stroke-width="7" fill="none"></path>
+  <path d="M304,500 C400,500 400,812 564,812" stroke="#3d8bff" stroke-width="3.5" fill="none"></path>
+  <path d="M304,544 C434,544 434,572 564,572" stroke="#000" stroke-opacity="0.55" stroke-width="7" fill="none"></path>
+  <path d="M304,544 C434,544 434,572 564,572" stroke="#2eff7b" stroke-width="3.5" fill="none"></path>
+  <path d="M304,588 L342,588" stroke="#557465" stroke-width="2" stroke-dasharray="4 3" fill="none"></path>
+  <text x="348" y="592" fill="#557465" font-size="10">nc</text>
+
+  <!-- wire labels left -->
+  <g font-size="10" text-anchor="middle" stroke="#07100c" stroke-width="4" paint-order="stroke" stroke-linejoin="round">
+    <text x="466" y="104" fill="#e23d3d">3V3</text>
+    <text x="462" y="150" fill="#9aa">GND</text>
+    <text x="472" y="290" fill="#c792ea">GPS-TX → 16</text>
+    <text x="398" y="242" fill="#9aa">GND</text>
+    <text x="470" y="228" fill="#e23d3d">3V3</text>
+    <text x="434" y="354" fill="#e8e8e8">GDO0 → 4</text>
+    <text x="434" y="446" fill="#ff8c3a">CSN → 5</text>
+    <text x="434" y="492" fill="#e6c84a">SCK → 18</text>
+    <text x="424" y="556" fill="#2eff7b">MISO → 19</text>
+    <text x="400" y="696" fill="#3d8bff">MOSI → 23</text>
+  </g>
+
+  <!-- ================= WIRES right side (buttons, pad rows K4..K1 = no crossings) ================= -->
+  <path d="M1175,320 C1035,320 1035,188 896,188" stroke="#000" stroke-opacity="0.55" stroke-width="7" fill="none"></path>
+  <path d="M1175,320 C1035,320 1035,188 896,188" stroke="#6a6a6a" stroke-width="3.5" fill="none"></path>
+  <path d="M1175,380 C1035,380 1035,380 896,380" stroke="#000" stroke-opacity="0.55" stroke-width="7" fill="none"></path>
+  <path d="M1175,380 C1035,380 1035,380 896,380" stroke="#a8b0b8" stroke-width="3.5" fill="none"></path>
+  <path d="M1175,430 C1035,430 1035,476 896,476" stroke="#000" stroke-opacity="0.55" stroke-width="7" fill="none"></path>
+  <path d="M1175,430 C1035,430 1035,476 896,476" stroke="#a8b0b8" stroke-width="3.5" fill="none"></path>
+  <path d="M1175,480 C1035,480 1035,524 896,524" stroke="#000" stroke-opacity="0.55" stroke-width="7" fill="none"></path>
+  <path d="M1175,480 C1035,480 1035,524 896,524" stroke="#a8b0b8" stroke-width="3.5" fill="none"></path>
+  <path d="M1175,530 C1035,530 1035,572 896,572" stroke="#000" stroke-opacity="0.55" stroke-width="7" fill="none"></path>
+  <path d="M1175,530 C1035,530 1035,572 896,572" stroke="#a8b0b8" stroke-width="3.5" fill="none"></path>
+
+  <g font-size="10" text-anchor="middle" fill="#a8b0b8" stroke="#07100c" stroke-width="4" paint-order="stroke" stroke-linejoin="round">
+    <text x="1035" y="248" fill="#9aa">GND</text>
+    <text x="1035" y="372">4 → 27</text>
+    <text x="1035" y="456">3 → 25</text>
+    <text x="1035" y="506">2 → 33</text>
+    <text x="1035" y="556">1 → 32</text>
+  </g>
+
+  <!-- pin dots on top of wires -->
+  <g stroke="#000" stroke-width="1.5">
+    <circle cx="304" cy="75" r="5" fill="#e23d3d"></circle>
+    <circle cx="304" cy="105" r="5" fill="#6a6a6a"></circle>
+    <circle cx="304" cy="135" r="5" fill="#c792ea"></circle>
+    <circle cx="304" cy="280" r="5" fill="#6a6a6a"></circle>
+    <circle cx="304" cy="324" r="5" fill="#e23d3d"></circle>
+    <circle cx="304" cy="368" r="5" fill="#e8e8e8"></circle>
+    <circle cx="304" cy="412" r="5" fill="#ff8c3a"></circle>
+    <circle cx="304" cy="456" r="5" fill="#e6c84a"></circle>
+    <circle cx="304" cy="500" r="5" fill="#3d8bff"></circle>
+    <circle cx="304" cy="544" r="5" fill="#2eff7b"></circle>
+    <circle cx="1175" cy="320" r="5" fill="#6a6a6a"></circle>
+    <circle cx="1175" cy="380" r="5" fill="#a8b0b8"></circle>
+    <circle cx="1175" cy="430" r="5" fill="#a8b0b8"></circle>
+    <circle cx="1175" cy="480" r="5" fill="#a8b0b8"></circle>
+    <circle cx="1175" cy="530" r="5" fill="#a8b0b8"></circle>
+  </g>
+  <circle cx="564" cy="140" r="6" fill="#e23d3d" stroke="#000" stroke-width="1.5"></circle>
+  <circle cx="564" cy="188" r="6" fill="#6a6a6a" stroke="#000" stroke-width="1.5"></circle>
+  <circle cx="564" cy="332" r="6" fill="#e8e8e8" stroke="#000" stroke-width="1.5"></circle>
+  <circle cx="564" cy="380" r="6" fill="#c792ea" stroke="#000" stroke-width="1.5"></circle>
+  <circle cx="564" cy="476" r="6" fill="#ff8c3a" stroke="#000" stroke-width="1.5"></circle>
+  <circle cx="564" cy="524" r="6" fill="#e6c84a" stroke="#000" stroke-width="1.5"></circle>
+  <circle cx="564" cy="572" r="6" fill="#2eff7b" stroke="#000" stroke-width="1.5"></circle>
+  <circle cx="564" cy="812" r="6" fill="#3d8bff" stroke="#000" stroke-width="1.5"></circle>
+  <circle cx="896" cy="188" r="6" fill="#6a6a6a" stroke="#000" stroke-width="1.5"></circle>
+  <circle cx="896" cy="380" r="6" fill="#a8b0b8" stroke="#000" stroke-width="1.5"></circle>
+  <circle cx="896" cy="476" r="6" fill="#a8b0b8" stroke="#000" stroke-width="1.5"></circle>
+  <circle cx="896" cy="524" r="6" fill="#a8b0b8" stroke="#000" stroke-width="1.5"></circle>
+  <circle cx="896" cy="572" r="6" fill="#a8b0b8" stroke="#000" stroke-width="1.5"></circle>
+</svg>
+
+<div class="row">
+  <div>
+  <h3>E07-M1101D pins 1–8 (source of truth)</h3>
+  <p class="muted">Pin 1 is GND — count from the GND end of the 8-pin row.</p>
+  <table>
+    <tbody><tr><th>#</th><th>Module</th><th>Color</th><th>ESP32 GPIO</th><th>Silk</th></tr>
+    <tr><td>1</td><td>GND</td><td>BLK</td><td>GND</td><td>GND (either side)</td></tr>
+    <tr><td>2</td><td>VCC</td><td>RED</td><td>3V3</td><td><strong>3V3 — not VIN</strong></td></tr>
+    <tr><td>3</td><td>GDO0</td><td>WHT</td><td>4</td><td>D4</td></tr>
+    <tr><td>4</td><td>CSN</td><td>ORG</td><td>5</td><td>D5</td></tr>
+    <tr><td>5</td><td>SCK</td><td>YEL</td><td>18</td><td>D18</td></tr>
+    <tr><td>6</td><td>MOSI</td><td>BLU</td><td>23</td><td>D23</td></tr>
+    <tr><td>7</td><td>MISO</td><td>GRN</td><td>19</td><td>D19</td></tr>
+    <tr><td>8</td><td>GDO2</td><td>—</td><td colspan="2">leave open</td></tr>
+  </tbody></table>
+  </div>
+  <div>
+  <h3>GPS NEO-6M-0-01</h3>
+  <table>
+    <tbody><tr><th>GPS pad</th><th>Color</th><th>ESP32</th></tr>
+    <tr><td>VCC</td><td>RED</td><td>3V3</td></tr>
+    <tr><td>GND</td><td>BLK</td><td>GND</td></tr>
+    <tr><td>TX (module sends NMEA)</td><td>PUR</td><td>GPIO 16 (RX2)</td></tr>
+    <tr><td>RX</td><td>—</td><td>leave open unless configuring the chip</td></tr>
+  </tbody></table>
+  <p class="muted">Ceramic antenna faces the sky. Indoor = “no fix”, that is normal.</p>
+  <h3>Buttons — 4× GRY to GND, pull-ups in the chip</h3>
+  <table>
+    <tbody><tr><th>Button</th><th>Pad</th><th>ESP32</th><th>Command</th></tr>
+    <tr><td>1</td><td>K1</td><td>32</td><td>reboot</td></tr>
+    <tr><td>2</td><td>K2</td><td>33</td><td>scan</td></tr>
+    <tr><td>3</td><td>K3</td><td>25</td><td>capstart (hold 2 s = capstop)</td></tr>
+    <tr><td>4</td><td>K4</td><td>27</td><td>apmode on/off</td></tr>
+    <tr><td>COM</td><td>—</td><td>GND</td><td>one BLK to ESP32 GND</td></tr>
+  </tbody></table>
+  <p class="muted">If the pad has a VCC pin, leave it unconnected. GND bus: one BLK female on ESP32 GND, then 33 AWG pigtails to each switch common if there is no shared COM.</p>
+  </div>
+</div>
+</section>
+
+<section>
+<h2>2. RELAY — second ESP32, radio only</h2>
+<p class="muted">Same seven radio wires, same colors, same GPIO numbers. No GPS, no buttons — this one stays on Wi-Fi to the cloud. Screw the 433 antenna on before power; two antennas, both vertical, not touching each other.</p>
+
+<svg viewBox="0 0 1010 980" xmlns="http://www.w3.org/2000/svg" aria-label="Relay wiring diagram" font-family="Consolas, monospace">
+
+  <!-- radio -->
+  <line x1="190" y1="222" x2="190" y2="150" stroke="#ffcf5c" stroke-width="5"></line>
+  <circle cx="190" cy="230" r="9" fill="#ffcf5c" stroke="#806a20"></circle>
+  <text x="205" y="185" fill="#ffcf5c" font-size="10">433 ANT</text>
+  <rect x="80" y="230" width="220" height="400" rx="6" fill="#0f1f14" stroke="#ffcf5c"></rect>
+  <text x="190" y="254" text-anchor="middle" fill="#ffcf5c" font-size="13">E07-M1101D</text>
+  <text x="190" y="270" text-anchor="middle" fill="#7aa38a" font-size="10">CC1101 · 433 MHz · 8-pin</text>
+  <rect x="120" y="300" width="140" height="160" fill="#233026" stroke="#3a4a3c"></rect>
+  <text x="190" y="385" text-anchor="middle" fill="#7aa38a" font-size="11">CC1101</text>
+  <g font-size="11" text-anchor="end">
+    <text x="290" y="284" fill="#9aa">1 GND</text>
+    <text x="290" y="328" fill="#e23d3d">2 VCC</text>
+    <text x="290" y="372" fill="#e8e8e8">3 GDO0</text>
+    <text x="290" y="416" fill="#ff8c3a">4 CSN</text>
+    <text x="290" y="460" fill="#e6c84a">5 SCK</text>
+    <text x="290" y="504" fill="#3d8bff">6 MOSI</text>
+    <text x="290" y="548" fill="#2eff7b">7 MISO</text>
+    <text x="290" y="592" fill="#557465">8 GDO2</text>
+  </g>
+  <rect x="300" y="272" width="8" height="326" fill="#1a1a1a"></rect>
+
+  <!-- ESP32 relay -->
+  <rect x="520" y="70" width="340" height="780" rx="10" fill="#0d1a14" stroke="#ffcf5c" stroke-width="2"></rect>
+  <text x="690" y="96" text-anchor="middle" fill="#ffcf5c" font-size="14">ESP32-RELAY-01</text>
+  <text x="690" y="114" text-anchor="middle" fill="#7aa38a" font-size="10">DevKit V1 · Wi-Fi to cloud</text>
+  <rect x="600" y="300" width="180" height="240" fill="#3a3f3a" stroke="#566"></rect>
+  <text x="690" y="426" text-anchor="middle" fill="#d7f7e3" font-size="12">WROOM-32</text>
+  <circle cx="560" cy="815" r="9" fill="#123" stroke="#7aa38a"></circle><text x="560" y="840" text-anchor="middle" fill="#557465" font-size="9">BOOT</text>
+  <circle cx="818" cy="815" r="9" fill="#123" stroke="#7aa38a"></circle><text x="818" y="840" text-anchor="middle" fill="#557465" font-size="9">EN</text>
+  <rect x="660" y="840" width="60" height="34" rx="4" fill="#222" stroke="#4fd6ff"></rect>
+  <text x="690" y="862" text-anchor="middle" fill="#4fd6ff" font-size="11">USB</text>
+
+  <rect x="520" y="132" width="8" height="688" fill="#1a1a1a"></rect>
+  <rect x="852" y="132" width="8" height="688" fill="#1a1a1a"></rect>
+
+  <g font-size="12" text-anchor="end">
+    <text x="508" y="144" fill="#e23d3d">3V3 — radio</text>
+    <text x="508" y="192" fill="#9aa">GND — radio</text>
+    <text x="508" y="240" fill="#557465">15</text>
+    <text x="508" y="288" fill="#557465">2</text>
+    <text x="508" y="336" fill="#e8e8e8">4 GDO0</text>
+    <text x="508" y="384" fill="#557465">16</text>
+    <text x="508" y="432" fill="#557465">17</text>
+    <text x="508" y="480" fill="#ff8c3a">5 CSN</text>
+    <text x="508" y="528" fill="#e6c84a">18 SCK</text>
+    <text x="508" y="576" fill="#2eff7b">19 MISO</text>
+    <text x="508" y="624" fill="#557465">21</text>
+    <text x="508" y="672" fill="#4fd6ff">3 RX0 · USB</text>
+    <text x="508" y="720" fill="#4fd6ff">1 TX0 · USB</text>
+    <text x="508" y="768" fill="#557465">22</text>
+    <text x="508" y="816" fill="#3d8bff">23 MOSI</text>
+  </g>
+  <g font-size="12" text-anchor="start" fill="#557465">
+    <text x="870" y="144">VIN — never</text>
+    <text x="870" y="192">GND</text>
+    <text x="870" y="240">13</text>
+    <text x="870" y="288">12</text>
+    <text x="870" y="336">14</text>
+    <text x="870" y="384">27</text>
+    <text x="870" y="432">26</text>
+    <text x="870" y="480">25</text>
+    <text x="870" y="528">33</text>
+    <text x="870" y="576">32</text>
+    <text x="870" y="624">35</text>
+    <text x="870" y="672">34</text>
+    <text x="870" y="720">39</text>
+    <text x="870" y="768">36</text>
+    <text x="870" y="816">EN</text>
+  </g>
+  <text x="690" y="884" text-anchor="middle" fill="#ffcf5c" font-size="11">no GPS · no buttons — relay only</text>
+
+  <!-- wires -->
+  <path d="M304,280 C434,280 434,188 524,188" stroke="#000" stroke-opacity="0.55" stroke-width="7" fill="none"></path>
+  <path d="M304,280 C434,280 434,188 524,188" stroke="#6a6a6a" stroke-width="3.5" fill="none"></path>
+  <path d="M304,324 C434,324 434,140 524,140" stroke="#000" stroke-opacity="0.55" stroke-width="7" fill="none"></path>
+  <path d="M304,324 C434,324 434,140 524,140" stroke="#e23d3d" stroke-width="3.5" fill="none"></path>
+  <path d="M304,368 C434,368 434,332 524,332" stroke="#000" stroke-opacity="0.55" stroke-width="7" fill="none"></path>
+  <path d="M304,368 C434,368 434,332 524,332" stroke="#e8e8e8" stroke-width="3.5" fill="none"></path>
+  <path d="M304,412 C434,412 434,476 524,476" stroke="#000" stroke-opacity="0.55" stroke-width="7" fill="none"></path>
+  <path d="M304,412 C434,412 434,476 524,476" stroke="#ff8c3a" stroke-width="3.5" fill="none"></path>
+  <path d="M304,456 C434,456 434,524 524,524" stroke="#000" stroke-opacity="0.55" stroke-width="7" fill="none"></path>
+  <path d="M304,456 C434,456 434,524 524,524" stroke="#e6c84a" stroke-width="3.5" fill="none"></path>
+  <path d="M304,500 C400,500 400,812 524,812" stroke="#000" stroke-opacity="0.55" stroke-width="7" fill="none"></path>
+  <path d="M304,500 C400,500 400,812 524,812" stroke="#3d8bff" stroke-width="3.5" fill="none"></path>
+  <path d="M304,544 C434,544 434,572 524,572" stroke="#000" stroke-opacity="0.55" stroke-width="7" fill="none"></path>
+  <path d="M304,544 C434,544 434,572 524,572" stroke="#2eff7b" stroke-width="3.5" fill="none"></path>
+  <path d="M304,588 L342,588" stroke="#557465" stroke-width="2" stroke-dasharray="4 3" fill="none"></path>
+  <text x="348" y="592" fill="#557465" font-size="10">nc</text>
+
+  <g font-size="10" text-anchor="middle" stroke="#07100c" stroke-width="4" paint-order="stroke" stroke-linejoin="round">
+    <text x="398" y="242" fill="#9aa">GND</text>
+    <text x="470" y="228" fill="#e23d3d">3V3</text>
+    <text x="434" y="354" fill="#e8e8e8">GDO0 → 4</text>
+    <text x="434" y="446" fill="#ff8c3a">CSN → 5</text>
+    <text x="434" y="492" fill="#e6c84a">SCK → 18</text>
+    <text x="424" y="556" fill="#2eff7b">MISO → 19</text>
+    <text x="400" y="696" fill="#3d8bff">MOSI → 23</text>
+  </g>
+
+  <g stroke="#000" stroke-width="1.5">
+    <circle cx="304" cy="280" r="5" fill="#6a6a6a"></circle>
+    <circle cx="304" cy="324" r="5" fill="#e23d3d"></circle>
+    <circle cx="304" cy="368" r="5" fill="#e8e8e8"></circle>
+    <circle cx="304" cy="412" r="5" fill="#ff8c3a"></circle>
+    <circle cx="304" cy="456" r="5" fill="#e6c84a"></circle>
+    <circle cx="304" cy="500" r="5" fill="#3d8bff"></circle>
+    <circle cx="304" cy="544" r="5" fill="#2eff7b"></circle>
+    <circle cx="524" cy="140" r="6" fill="#e23d3d"></circle>
+    <circle cx="524" cy="188" r="6" fill="#6a6a6a"></circle>
+    <circle cx="524" cy="332" r="6" fill="#e8e8e8"></circle>
+    <circle cx="524" cy="476" r="6" fill="#ff8c3a"></circle>
+    <circle cx="524" cy="524" r="6" fill="#e6c84a"></circle>
+    <circle cx="524" cy="572" r="6" fill="#2eff7b"></circle>
+    <circle cx="524" cy="812" r="6" fill="#3d8bff"></circle>
+  </g>
+</svg>
+</section>
+
+<section>
+<h2>3. 33 AWG without solder — make pins with folds</h2>
+<svg viewBox="0 0 940 260" xmlns="http://www.w3.org/2000/svg" aria-label="33 AWG technique" font-family="Consolas, monospace">
+  <!-- panel 1: fold -->
+  <text x="20" y="28" fill="#2eff7b" font-size="12">1 · fold 33 AWG into a pin</text>
+  <line x1="30" y1="90" x2="110" y2="90" stroke="#d98e5a" stroke-width="2"></line>
+  <text x="70" y="112" text-anchor="middle" fill="#7aa38a" font-size="9">strip 12 mm</text>
+  <path d="M125,90 q10,-32 20,0 q10,32 20,0 q10,-32 20,0" stroke="#d98e5a" stroke-width="2" fill="none"></path>
+  <text x="165" y="140" text-anchor="middle" fill="#7aa38a" font-size="9">fold 2–3×</text>
+  <line x1="215" y1="90" x2="235" y2="90" stroke="#7aa38a" stroke-width="2"></line>
+  <path d="M235,84 l12,6 l-12,6" fill="none" stroke="#7aa38a" stroke-width="2"></path>
+  <line x1="260" y1="90" x2="320" y2="90" stroke="#d98e5a" stroke-width="6"></line>
+  <text x="290" y="112" text-anchor="middle" fill="#7aa38a" font-size="9">twist = pin thickness</text>
+  <text x="170" y="200" text-anchor="middle" fill="#557465" font-size="10">enamel wire: scrape shiny first</text>
+
+  <!-- panel 2: dupont crimp -->
+  <text x="360" y="28" fill="#2eff7b" font-size="12">2 · jam into a Dupont contact</text>
+  <rect x="380" y="55" width="34" height="80" rx="3" fill="#222" stroke="#555"></rect>
+  <text x="397" y="152" text-anchor="middle" fill="#7aa38a" font-size="9">housing</text>
+  <path d="M414,70 h44 v40 h-44" fill="#b9c0c6" stroke="#777"></path>
+  <path d="M420,70 l8,-10 M420,110 l8,10 M452,70 l8,-10 M452,110 l8,10" stroke="#b9c0c6" stroke-width="3" fill="none"></path>
+  <line x1="465" y1="90" x2="545" y2="90" stroke="#d98e5a" stroke-width="6"></line>
+  <text x="470" y="140" fill="#7aa38a" font-size="9">crush the wings with pliers</text>
+  <text x="455" y="200" text-anchor="middle" fill="#557465" font-size="10">sacrifice one female jumper for its contact</text>
+
+  <!-- panel 3: through-hole -->
+  <text x="640" y="28" fill="#2eff7b" font-size="12">3 · module has holes, no pins</text>
+  <rect x="640" y="55" width="130" height="130" rx="4" fill="#0f1f14" stroke="#ffcf5c"></rect>
+  <text x="672" y="200" fill="#7aa38a" font-size="9">module</text>
+  <circle cx="770" cy="100" r="7" fill="#000" stroke="#fff"></circle>
+  <path d="M900,150 C830,150 790,145 772,104" stroke="#d98e5a" stroke-width="2.5" fill="none"></path>
+  <path d="M768,98 C756,72 736,66 716,72" stroke="#d98e5a" stroke-width="2.5" fill="none"></path>
+  <path d="M770,104 C768,124 752,132 738,130" stroke="#d98e5a" stroke-width="2.5" fill="none"></path>
+  <rect x="692" y="42" width="30" height="26" rx="3" fill="#222" stroke="#555"></rect>
+  <text x="728" y="60" fill="#7aa38a" font-size="9">female dupont clips here</text>
+  <text x="800" y="225" text-anchor="middle" fill="#7aa38a" font-size="9">poke up through, fold both sides, tape the underside</text>
+</svg>
+<ol>
+<li>Strip 12 mm. Enamel magnet wire: scrape until shiny copper.</li>
+<li>Fold in half, in half again (4 strands), twist tight — that is Dupont-pin thickness.</li>
+<li>Into a sacrificed female contact (panel 2), or through a module hole folded like a staple (panel 3).</li>
+<li>Do not tin. Do not use 5 V. Tug-test every wire before power.</li>
+</ol>
+</section>
+
+<section>
+<h2>4. Power-on checklist</h2>
+<ol>
+<li>USB into the PC, not a charger brick, for the first test.</li>
+<li>Multimeter: E07 pin 2 to GND is ~3.3 V, never ~5 V.</li>
+<li>Antennas screwed on before power, both vertical, not touching.</li>
+<li>Wiggle each Dupont. If a 33 AWG stub pulls out, fold more strands.</li>
+<li>Do not flash yet — this page is the gate. Firmware comes after the map matches your silk.</li>
+</ol>
+</section>
+
+<section>
+<h2>5. What is left on the sniffer — and what clips on next</h2>
+<p><strong>Free pins:</strong> 21 + 22 (keep as the I2C pair), 13, 14, 17, 26, 15*.
+<strong>Input-only:</strong> 34 / 35 / 36 / 39 (analog: battery voltage, light sensor).
+<strong>Leave alone:</strong> 1 / 3 (USB serial), strapping 0 / 2 / 12 / 15*, flash 6–11, VIN.</p>
+
+<table>
+<tbody><tr><th>Pri</th><th>Part</th><th>Bus / pins</th><th>Why</th></tr>
+<tr><td>P1</td><td>SSD1306 0.96" OLED</td><td>I2C · SDA 21, SCL 22, 3V3, GND</td><td>See AP / GPS / hits with no phone</td></tr>
+<tr><td>P1</td><td>Active 3.3 V buzzer</td><td>GPIO 26 → +, GND → −</td><td>Hear hits when the dashboard is not in the room</td></tr>
+<tr><td>P1</td><td>DS3231 RTC</td><td>I2C 21/22 (+ coin cell on module)</td><td>Real timestamps in AP mode when NTP is dead</td></tr>
+<tr><td>P2</td><td>microSD adapter (3.3 V)</td><td>SPI shared · CS 13</td><td>Dump the 256-frame ring offline; never share CS with the CC1101</td></tr>
+<tr><td>P2</td><td>USB power bank / 18650</td><td>USB or regulated 5 V VIN</td><td>Walk around; radio + GPS still on 3V3</td></tr>
+<tr><td>P2</td><td>BME280 / AHT20</td><td>I2C 21/22</td><td>Temp / humidity / pressure metadata per scan</td></tr>
+<tr><td>P3</td><td>INA219 current sensor</td><td>I2C 21/22</td><td>See how hard sniff + TX hits the battery</td></tr>
+<tr><td>P3</td><td>Photoresistor / LDR</td><td>ADC GPIO 34</td><td>Cheap “is this indoors” flag</td></tr>
+</tbody></table>
+<p class="muted">I2C rule: OLED + RTC + BME280 all hang on 21/22 together — that is why those two stay free.</p>
+
+<h3>Whole-board alternatives — replace, do not stack</h3>
+<table>
+<tbody><tr><th>Board</th><th>Verdict</th><th>Why</th></tr>
+<tr><td>LilyGO T-Beam</td><td>P2 alt</td><td>GPS + sub-GHz + battery routed; different radio chip than the E07. Cleaner field brick later.</td></tr>
+<tr><td>Heltec WiFi LoRa 32 V3</td><td>P3 alt</td><td>OLED + SX1262 on one PCB, different PHY. Dashboard-in-hand, not an E07 peer.</td></tr>
+<tr><td>ESP32-S3 DevKit</td><td>P3 alt</td><td>More GPIO + USB-OTG; firmware is a port, not a clip-on.</td></tr>
+<tr><td>ESP32-CAM</td><td class="warn">skip</td><td>Eats the SPI pins the CC1101 needs.</td></tr>
+<tr><td>nRF24L01+ / second radio</td><td class="warn">skip</td><td>Same SPI bus, 2.4 GHz fights Wi-Fi.</td></tr>
+</tbody></table>
+
+<h3>Do not bolt onto this DevKit</h3>
+<ul>
+<li class="warn">Anything 5 V logic without a shifter (many Arduino sensor kits).</li>
+<li class="warn">Modules that want GPIO 12 high at boot (SD on 12 bricks boot).</li>
+<li class="warn">A second SPI radio (nRF24, RC522, extra CC1101) on the sniffer.</li>
+<li>Solder — everything above is Dupont or 33 AWG stubs, like the rest of this page.</li>
+</ul>
+</section>
+
+<footer class="muted">
+<p>Pin numbers from the E07-M1101D 8-pin datasheet and the DOIT ESP32 DevKit V1 30-pin layout (<code>esp32doit-devkit-v1</code>), matching spec B in
+<code>docs/superpowers/specs/2026-08-31-cc1101-relay-field-kit-design.md</code>. If anything on your silk disagrees with this page, the silk wins — stop and re-check before flashing.</p>
+</footer>
+
+
+
+</body></html>

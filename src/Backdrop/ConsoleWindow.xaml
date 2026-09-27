@@ -1,3 +1,55 @@
+<!--
+  ConsoleWindow.xaml — the settings / control panel window. A small always-on-top tool
+  window hosting its OWN WebView2 that loads console.html (the panel UI only, no scene).
+  It lives separately from the wallpaper on purpose: opening the panel must never move or
+  foreground the fullscreen backdrop, so the desktop, taskbar, and apps stay usable.
+  Code-behind (ConsoleWindow.xaml.cs) does the WebView2 wiring and the Win32 tool-window
+  restyle; this markup just sets the chrome-less starting shape.
+
+  XAML note: comments can only sit between elements, not between a tag's attributes, so the
+  per-property reasoning is collected here instead of inline on each line below.
+
+    x:Class                 binds this markup to the ConsoleWindow partial class in the code-behind.
+    wv2                      the WebView2 WPF wrapper namespace — the panel HTML renders in this control.
+
+    Title=Settings           shown nowhere as chrome (WindowStyle=None), but it's the OS window
+                             text — used by Alt+Tab / tools before code-behind flips it to a
+                             tool window, and handy when debugging with Spy++.
+
+    Width / Height           fixed panel size. Unlike the wallpaper this is a normal floating
+                             window, so a real size here is the final size — no code override.
+
+    WindowStyle=None         no title bar or border. The panel draws its own header/close button
+                             in HTML, so we suppress the native chrome entirely.
+
+    ResizeMode=NoResize      the panel layout is designed for one width; let the user drag it
+                             around (code-behind handles that) but not resize it.
+
+    ShowInTaskbar=False      it's a tool, not an app — keep it off the taskbar. Code-behind also
+                             sets WS_EX_TOOLWINDOW / clears WS_EX_APPWINDOW in OnSourceInitialized
+                             to also drop it from Alt+Tab.
+
+    AllowsTransparency=False no per-pixel alpha. True forces WPF onto the slow layered-window
+                             path, which can't host an HWND child like WebView2 — the browser
+                             surface goes non-interactive (the classic "airspace" trap). We use
+                             a solid dark background instead so clicks stay live.
+
+    Background=#FF202020      opaque dark fill shown for the split second before WebView2 paints.
+                             Matches DefaultBackgroundColor set in code-behind (ARGB 255,32,32,32)
+                             so there's no flash on open.
+
+    Topmost=True             the panel must float above the desktop and normal windows while open
+                             — you're editing settings and watching the wallpaper react live.
+
+    ShowActivated=True        take focus on open so keyboard input (sliders, text fields) works
+                             immediately without an extra click.
+
+    UseLayoutRounding /       snap to whole device pixels so the WebView2 surface and the panel's
+    SnapsToDevicePixels       text stay crisp.
+
+    WindowStartupLocation=    code-behind positions it near the top-right of the work area
+    Manual                   (PlaceTopRight); auto-placement would flash it centered first.
+-->
 <Window x:Class="Backdrop.ConsoleWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
@@ -14,6 +66,15 @@
         UseLayoutRounding="True"
         SnapsToDevicePixels="True"
         WindowStartupLocation="Manual">
+    <!--
+      Single WebView2 filling the Grid. x:Name="Web" is how code-behind reaches it:
+      EnsureCoreWebView2Async is called with the SHARED CoreWebView2Environment from the
+      scene (a second environment on the same user-data folder fails with
+      ERROR_NOT_IN_CORRECT_STATE — one environment can back many controllers), then a
+      virtual-host mapping (https://backdrop.invalid/ -> the web/ folder) and Navigate to
+      console.html. The panel never writes config itself; every edit is posted back to
+      MainWindow as a JSON web-message.
+    -->
     <Grid>
         <wv2:WebView2 x:Name="Web" />
     </Grid>

@@ -19,7 +19,12 @@
   "hud":     { "enabled": false, "corner": "bottom-right", "clock24h": true, "locale": "en-CA" },
   "comms":   { "enabled": true, "url": "https://ai.yakupov.xyz/api/chat/completions", "baseUrl": "https://ai.yakupov.xyz/api", "model": "llama-70b", "imageModel": "sdxl", "apiKey": "", "path": "chat/completions" },
   "audio":   { "enabled": true, "volume": 0.2 },
-  "installed": [ "solarsystem", "night-field", "starnode", "farfield", "globule" ],
+  "installed": [
+    "solarsystem", "night-field", "starnode", "farfield", "globule",
+    "webbmirror", "lensfield", "nircam", "starburst", "saucer",
+    "lionshead", "eclipsepair", "spikehero", "coldlens", "orionhall",
+    "cosmiccliffs", "pillars", "southring"
+  ],
   "scenes":  {
     "aurora":    { "intensity": 1.6,  "speed": 0.16, "height": 0.95, "volume": 0.18 },
     "terrascii": { "intensity": 1.1,  "speed": 0.12, "height": 0.7,  "volume": 0.08 },
@@ -31,6 +36,19 @@
     "night-field": { "intensity": 1.05, "speed": 0.08, "height": 0.55, "volume": 0.12 },
     "starnode":    { "intensity": 1.2,  "speed": 0.12, "height": 0.8,  "volume": 0.16 },
     "farfield":    { "intensity": 1.0,  "speed": 0.08, "height": 0.5,  "volume": 0.18 },
-    "globule":     { "intensity": 1.45, "speed": 0.12, "height": 0.9,  "volume": 0.2  }
+    "globule":     { "intensity": 1.45, "speed": 0.12, "height": 0.9,  "volume": 0.2  },
+    "webbmirror":  { "intensity": 1.20, "speed": 0.12, "height": 0.80, "volume": 0.18 },
+    "lensfield":   { "intensity": 1.15, "speed": 0.10, "height": 0.75, "volume": 0.16 },
+    "nircam":      { "intensity": 1.25, "speed": 0.16, "height": 0.85, "volume": 0.18 },
+    "starburst":   { "intensity": 1.30, "speed": 0.18, "height": 0.85, "volume": 0.18 },
+    "saucer":      { "intensity": 1.10, "speed": 0.10, "height": 0.70, "volume": 0.14 },
+    "lionshead":   { "intensity": 1.25, "speed": 0.22, "height": 0.85, "volume": 0.16 },
+    "eclipsepair": { "intensity": 1.15, "speed": 0.18, "height": 0.85, "volume": 0.14 },
+    "spikehero":   { "intensity": 1.30, "speed": 0.24, "height": 0.85, "volume": 0.18 },
+    "coldlens":    { "intensity": 1.20, "speed": 0.20, "height": 0.90, "volume": 0.16 },
+    "orionhall":   { "intensity": 1.20, "speed": 0.16, "height": 0.85, "volume": 0.15 },
+    "cosmiccliffs": { "intensity": 1.22, "speed": 0.14, "height": 0.88, "volume": 0.16 },
+    "pillars":      { "intensity": 1.18, "speed": 0.13, "height": 0.86, "volume": 0.16 },
+    "southring":    { "intensity": 1.20, "speed": 0.12, "height": 0.82, "volume": 0.15 }
   }
 }

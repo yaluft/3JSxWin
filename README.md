@@ -1,7 +1,7 @@
 # 3JSxWin
 
 <p align="center">
-  <img src="v2.0.gif" alt="Preview v2: Deep Field on the Windows 11 desktop" width="720" />
+  <img src="assets/gifs/v2.0.gif" alt="Preview v2: Deep Field on the Windows 11 desktop" width="720" />
 </p>
 
 <p align="center">
@@ -30,8 +30,8 @@ The renderer is a vendored three.js scene (r185, offline). Tune it live with `Ct
 ## Features
 
 - Six core scenes always loaded: Aurora, Tube Dunes, Tube Warp, Ion, Tube Loops, Glyphfall
-- Optional library under `web/themes/` (Farfield, Globule, Night Field, Star Node, Solar System) — files ship, shaders load only after you install them in the console
-- Generated soundscapes (no files); optional themes bring their own graph
+- Optional library under `web/themes/` (Farfield, Globule, Night Field, Star Node, Solar System, plus JWST/nebula scenes: Webb Mirror, Gravitational Lens, FS Tau, Centaurus A, Sombrero, Lion's Head, Eclipse Pair, Spike Hero, Cold Lens, Orion Hall) — files ship, shaders load only after you install them in the console
+- Generated Tone.js interstellar soundscape — space drones, cosmic wind, and sparse calm phrases; no audio files, no network; optional themes bring their own reading of the same engine
 - ASCII scenes use a 32-glyph density ramp, palette-tinted ink, and a 480-column cap
 - Palette randomizer using real Neovim themes (Catppuccin, Tokyo Night, Rosé Pine, Kanagawa, …)
 - Dual-monitor default: one native-resolution copy per display (`--duplicate-all`)
@@ -56,6 +56,15 @@ To build from source you need [WebView2](https://developer.microsoft.com/microso
 ```powershell
 git clone https://github.com/yaluft/3JSxWin.git
 cd 3JSxWin
+.\installer.ps1 -Build      # install to %LOCALAPPDATA%\Programs\Win11Backdrop and launch
+```
+
+The installer publishes straight from source into the deepest standard per-user
+location (no admin), pins a Start-menu shortcut, creates the Startup shortcut,
+and registers an Add/Remove-Programs entry with a matching uninstaller. Just
+kicking the tires instead?
+
+```powershell
 .\build.ps1
 .\dist\Backdrop.exe --window    # always test here first
 .\dist\Backdrop.exe             # then put it on the desktop
@@ -79,7 +88,7 @@ The window disappears in desktop mode. A tray icon is the way back:
 | Desktop layout    | Single, span all, or duplicate on every monitor |
 | Reload scene      | Re-read `dist\web\config.json`                  |
 | Open scene folder | Jump to `dist\web\`                             |
-| Open DevTools     | Needs `--devtools` on the command line          |
+| Open DevTools     | Chromium DevTools for the live scene            |
 | Open log          | `%LOCALAPPDATA%\Backdrop\backdrop.log`          |
 | Quit Backdrop     | Exit                                            |
 
@@ -91,12 +100,11 @@ With two or more monitors the default is **duplicate** (one scene per display at
 .\dist\Backdrop.exe --duplicate-all   # one copy per monitor (default on dual screen)
 .\dist\Backdrop.exe --span-all        # one canvas across every monitor
 .\dist\Backdrop.exe --monitor 1       # second monitor from the left only
-.\install-startup.ps1
-.\install-startup.ps1 -Arguments "--span-all"
-.\install-startup.ps1 -Remove
 ```
 
-Win+`]` next scene · Win+`[` previous · Win+`P` shuffle palette. Win+`C` opens Comms (steals the chord from Copilot). Each switch shows the scene name and palette for a couple of seconds.
+Start-at-logon is built in — tray → **Start with Windows** (or the settings panel's System card). It drops the same Startup-folder shortcut, no admin.
+
+Win+`]` next scene · Win+`[` previous · Win+`P` shuffle palette (the pick is persisted automatically). Win+`C` opens Comms and fully overrides Copilot — the shortcut **and** the dedicated Copilot keyboard key both open Comms while Backdrop is running. Each switch shows the scene name and palette for a couple of seconds.
 
 ### Tune the scene
 

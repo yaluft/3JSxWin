@@ -1,15 +1,37 @@
 <!doctype html>
+<!-- console.html — the standalone Settings window. Loaded inside ConsoleWindow's own tiny
+     always-on-top WebView2, NOT the scene. It ships almost no markup on purpose: panel.js
+     builds the entire settings UI at runtime from its CONTROLS table, so all this page
+     provides is a styled shell and one <script> that boots console-main.js. -->
 <html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <!-- Force dark UA styling. The window has no light mode, and this keeps form controls
+       (the <select>/<input> widgets panel.js injects) rendering dark from the first paint. -->
   <meta name="color-scheme" content="dark" />
   <title>Settings</title>
-  <link rel="stylesheet" href="./style.css?v=8" />
-  <style>body.console-page{background:#202020;margin:0}</style>
+  <!-- Same inline favicon as index.html; without it this window 404s on /favicon.ico in
+       the console every time it opens. -->
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%2304060c'/%3E%3Cpath d='M3 22 Q12 12 22 20 T29 12' stroke='%2335e3a0' stroke-width='3' fill='none'/%3E%3C/svg%3E" />
+  <!-- Shared stylesheet with the scene page — it carries the .console* card/slider rules.
+       ?v=9 is the cache-buster: WebView2 caches assets hard, so the number is bumped on
+       every edit to style.css to force a fresh fetch (same trick as the ?v=N on the JS). -->
+  <link rel="stylesheet" href="./style.css?v=9" />
+  <!-- Inline paint so the window opens on the space-void colour with no white flash
+       before style.css lands. .console-page is the "in its own window, fill the frame"
+       variant of .console (see style.css) — the in-scene overlay uses .console without
+       this class. -->
+  <style>body.console-page{background:#05070f;margin:0}</style>
 </head>
 <body class="console-page">
-  <p id="console-boot" style="color:#9d9d9d;font:13px/1.5 &quot;Segoe UI Variable Text&quot;,Segoe UI,sans-serif;padding:20px 24px">Loading settings…</p>
-  <script type="module" src="./js/console-main.js?v=3"></script>
+  <!-- Placeholder shown while console-main.js resolves config and fetches the theme
+       catalog. Styled inline because style.css may not have loaded yet at this point.
+       console-main.js removes #console-boot by id the instant the real panel is in the DOM. -->
+  <p id="console-boot" style="color:#8ea6c8;font:13px/1.5 &quot;Segoe UI Variable Text&quot;,Segoe UI,sans-serif;padding:20px 24px">Loading settings…</p>
+  <!-- The whole app. type="module" so it can use import; ?v=4 is the same cache-buster.
+       console-main.js is the thin seam — it builds the panel via panel.js and forwards
+       every edit up to C# (ConsoleWindow -> SceneHost) as a chrome.webview.postMessage. -->
+  <script type="module" src="./js/console-main.js?v=5"></script>
 </body>
 </html>
