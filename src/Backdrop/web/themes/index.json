@@ -107,6 +107,12 @@
       "label": "Southern Ring",
       "blurb": "NGC 3132 — a 3D hollow shell, cyan cavity, gold rings, radial spokes, a binary at the heart",
       "family": "world"
+    },
+    {
+      "id": "jetdisk",
+      "label": "Jet Disk",
+      "blurb": "A tilted salmon dust disk around a white-hot core — rust veins, a dark near-side dust bank, a cyan jet piercing the frame",
+      "family": "world"
     }
   ]
 }

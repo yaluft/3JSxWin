@@ -23,3 +23,4 @@ Optional (ship in `web/themes/`, load after install):
 | cosmiccliffs | Cosmic Cliffs | — |
 | pillars | Pillars of Creation | — |
 | southring | Southern Ring | — |
+| jetdisk | Jet Disk | [jetdisk.png](jetdisk.png) |
