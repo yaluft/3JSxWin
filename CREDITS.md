@@ -74,6 +74,11 @@ Co-Authored-By: Claude <noreply@anthropic.com>
     ESA, CSA, STScI — drives **Pillars of Creation**.
   - `jwst-southern-ring.png` — Webb NIRCam *Southern Ring Nebula* (NGC 3132).
     Image: NASA, ESA, CSA, STScI — drives **Southern Ring**.
+  - A NASA *Artist's Concept* of a young object launching a jet (tilted salmon
+    dust disk, white-hot core, rust filaments, a dark near-side dust bank and a thin
+    cyan bipolar jet). Image: NASA — drives **Jet Disk**. The reference was shared
+    in-session and is not redistributed; `docs/themes/jetdisk.png` is a render of
+    the shader, not the source image.
 
 ## Prior art
 

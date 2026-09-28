@@ -23,7 +23,7 @@
     "solarsystem", "night-field", "starnode", "farfield", "globule",
     "webbmirror", "lensfield", "nircam", "starburst", "saucer",
     "lionshead", "eclipsepair", "spikehero", "coldlens", "orionhall",
-    "cosmiccliffs", "pillars", "southring"
+    "cosmiccliffs", "pillars", "southring", "jetdisk"
   ],
   "scenes":  {
     "aurora":    { "intensity": 1.6,  "speed": 0.16, "height": 0.95, "volume": 0.18 },
@@ -49,6 +49,7 @@
     "orionhall":   { "intensity": 1.20, "speed": 0.16, "height": 0.85, "volume": 0.15 },
     "cosmiccliffs": { "intensity": 1.22, "speed": 0.14, "height": 0.88, "volume": 0.16 },
     "pillars":      { "intensity": 1.18, "speed": 0.13, "height": 0.86, "volume": 0.16 },
-    "southring":    { "intensity": 1.20, "speed": 0.12, "height": 0.82, "volume": 0.15 }
+    "southring":    { "intensity": 1.20, "speed": 0.12, "height": 0.82, "volume": 0.15 },
+    "jetdisk":      { "intensity": 1.15, "speed": 0.14, "height": 0.80, "volume": 0.15 }
   }
 }
